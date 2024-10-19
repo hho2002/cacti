@@ -8701,6 +8701,22 @@ function substring_index($subject, $delim, $count) {
 	}
 }
 
+function cacti_format_ipv6_colon($address) {
+	if (!filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+		return $address;
+	}
+
+	if (strpos($address, '[') !== false) {
+		return $address;
+	}
+
+	if (strpos($address, ':') !== false) {
+		return '[' . $address . ']';
+	}
+
+	return($address);
+}
+
 function text_substitute(null|array|string $text, bool $isHtml = true, bool $includeStandard = true,
 	?array $extraSubtitutions = null, ?array $extraMatches = null) {
 	if (!empty($text)) {
