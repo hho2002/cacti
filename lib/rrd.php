@@ -1254,7 +1254,7 @@ function rrd_function_process_graph_options($graph_start, $graph_end, &$graph, &
 	/* activate --add-jsontime option for graphv only and RRDtool version 1.8.0 and above */
 	if (isset($graph_data_array['graphv'])) {
 		$rrdversion = get_rrdtool_version();
-		if (isset($rrdversion) && cacti_version_compare($rrdversion,'1.8','>=')) {
+		if (isset($rrdversion) && cacti_version_compare($rrdversion, '1.8', '>=')) {
 			$graph_opts .= '--add-jsontime ' . RRD_NL;
 		}
 	}
@@ -2602,8 +2602,15 @@ function rrdtool_function_graph($local_graph_id, $rra_id, $graph_data_array, $rr
 
 		/* either print out the source or pass the source onto rrdtool to get us a nice PNG */
 		if (isset($graph_data_array['print_source'])) {
-			$source_command_line         = read_config_option('path_rrdtool') . ' graph ' . $graph_opts . $graph_defs . $txt_graph_items;
+			if (isset($graph_data_array['graphv'])) {
+				$graph = 'graphv';
+			} else {
+				$graph = 'graph';
+			}
+
+			$source_command_line = read_config_option('path_rrdtool') . " $graph " . $graph_opts . $graph_defs . $txt_graph_items;
 			$source_command_line_lengths = strlen(str_replace("\\\n", ' ', $source_command_line));
+
 			print '<pre>' . wordwrap(html_escape($source_command_line), 160, PHP_EOL, true) . '</pre>';
 			print '<span class="textInfo">' . 'RRDtool Command lengths = ' . $source_command_line_lengths . ' characters.</span><br>';
 			if ( $config['cacti_server_os'] == 'win32' && $source_command_line_lengths > 8191 ) {
