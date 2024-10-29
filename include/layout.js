@@ -3751,8 +3751,9 @@ function closeDateFilters() {
 
 function saveGraphFilter(section) {
 	postUrl({
+		noState: true,
 		url: graphPage + '?action=save',
-		funcEnd: 'finializeGraphFilter'
+		funcEnd: 'finalizeGraphFilter'
 	}, {
 		section: section,
 		columns: $('#columns').val(),
