@@ -3428,11 +3428,11 @@ function setSelectMenus() {
 						$(this).val(ui.item.value).change();
 					},
 					position: {
-						my: "left top",
-						at: "left bottom",
-						collision: "flip"
+						my: 'left top',
+						at: 'left bottom',
+						collision: 'flip'
 					},
-					width: false
+					width: 'auto'
 				});
 
 				$('#'+id+'-menu').css('max-height', '250px');
