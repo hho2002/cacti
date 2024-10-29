@@ -3302,7 +3302,7 @@ var waitForFinalEvent = (function () {
 })();
 
 function setSelectMenus() {
-	$.widget("ui.selectmenu", $.ui.selectmenu, {
+	$.widget('ui.selectmenu', $.ui.selectmenu, {
 		_renderMenu: function(ul, items) {
 			let that = this;
 			let attr = this.element[0].attributes;
@@ -3375,35 +3375,40 @@ function setSelectMenus() {
 					filterActive = (defaultIndex !== item.index) ? 'true' : 'false';
 				}
 
-				let buttonItem = $( "<span>", {
-					"class": "ui-selectmenu-text",
-					"data-active": filterActive
+				let buttonItem = $('<span>', {
+					'class': 'ui-selectmenu-text',
+					'data-active': filterActive
 				})
 
 				if (filterActive === 'true') {
 					this._setText(buttonItem, ((showDefaultLabel) ? defaultLabel+': ' : '') + item.label);
 
-          let icon = {'button' : 'ui-icon-close'};
-					this._setOption( 'icons', icon );
+					let icon = {'button' : 'ui-icon-close'};
 
-					this._off( this.button.find( "span.ui-icon" ), 'click');
-					this._on( false, this.button.find( "span.ui-icon" ), {
-						click: function( event ) {
+					this._setOption('icons', icon);
+
+					this._off(this.button.find('span.ui-icon'), 'click');
+					this._on(false, this.button.find('span.ui-icon'), {
+						click: function(event) {
 							event.stopImmediatePropagation();
-							let defaultValue = that.element.find( "option" ).eq(0).val();
-							let item = {'index' : 0, 'value' : defaultValue };
-							this._select( item, event);
+							let defaultValue = this.element.find('option').eq(0).val();
+							let defaultLabel = this.element.find('option').eq(0).text();
+							let item = {'index' : 0, 'value' : defaultValue, 'label' : defaultLabel };
+							this._select(item, event);
 						}
-					} );
+					});
 				} else {
-					this._setText( buttonItem, (showDefaultLabel) ? defaultLabel : item.label );
+					this._setText(buttonItem, (showDefaultLabel) ? defaultLabel : item.label);
 				}
+
 				return buttonItem;
 			} else {
-				let buttonItem = $( "<span>", {
-					"class": "ui-selectmenu-text",
+				let buttonItem = $('<span>', {
+					'class': 'ui-selectmenu-text',
 				})
-				this._setText( buttonItem, item.label );
+
+				this._setText(buttonItem, item.label);
+
 				return buttonItem;
 			}
 		}
@@ -3420,9 +3425,14 @@ function setSelectMenus() {
 				$(this).selectmenu({
 					open: function(event, ui) {
 						let instance = $(this).selectmenu('instance');
+
 						instance.menuInstance.focus(null, instance._getSelectedItem());
+
 						let search = instance.menuWrap.find('input');
-						if (search.length > 0) search.focus();
+
+						if (search.length > 0) {
+							search.focus();
+						}
 					},
 					change: function(event, ui) {
 						$(this).val(ui.item.value).change();
