@@ -516,8 +516,6 @@ switch (get_nfilter_request_var('action')) {
 				'cf'          => 'avg',
 				'metric'      => 'average'
 			);
-
-			cacti_log(json_encode($sql_order));
 		}
 
 
