@@ -1729,7 +1729,8 @@ function form_save_button($cancel_url, $force_type = '', $key_field = 'id', $aja
  */
 function form_save_buttons($buttons, $ajax = true) {
 	if (isset($_SERVER['HTTP_REFERER'])) {
-		$cancel_url = basename($_SERVER['HTTP_REFERER']);
+		$url_components = parse_url($_SERVER['HTTP_REFERER']);
+		$cancel_url = $url_components['path'];
 	} else {
 		$cancel_url = '';
 	}
