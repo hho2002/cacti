@@ -3705,11 +3705,12 @@ if (typeof urlPath == 'undefined') {
 }
 
 /* Setup a session per tab */
-if (!sessionStorage.tab || window.name == '') {
+if (window.name == '') {
 	var max = 99999999;
 	var min = 10000000;
 	sessionStorage.tab = Math.floor(Math.random() * (max - min + 1) + min);
 	window.name = 'tab';
+	document.location = document.location.href;
 }
 
 var graphPage = urlPath + 'graph_view.php';
