@@ -612,14 +612,15 @@ function remove_files($file_array) {
 
 		if (read_config_option('storage_location') == 0) {
 			switch ($file['action']) {
-				case '1' :
-					if (file_exists($source_file) && unlink($source_file)) {
-						maint_debug('Deleted: ' . $file['name']);
-					} else {
-						cacti_log($file['name'] . " ERROR: RRDfile Maintenance unable to delete from $rra_path!", true, 'MAINT');
+				case '1':
+					if (file_exists($source_file)) {
+						if (unlink($source_file)) {
+							maint_debug('Deleted: ' . $file['name']);
+							$purged++;
+						} else {
+							cacti_log($file['name'] . " ERROR: RRDfile Maintenance unable to delete from $rra_path!", true, 'MAINT');
+						}
 					}
-
-					$purged++;
 
 					break;
 				case '3':
@@ -630,13 +631,14 @@ function remove_files($file_array) {
 						rrdclean_create_path($target_dir);
 					}
 
-					if (file_exists($source_file) && rename($source_file, $target_file)) {
-						maint_debug('Moved: ' . $file['name'] . ' to: ' . $rrd_archive);
-					} else {
-						cacti_log($file['name'] . " ERROR: RRDfile Maintenance unable to move to $rrd_archive!", true, 'MAINT');
+					if (file_exists($source_file)) {
+						if (rename($source_file, $target_file)) {
+							maint_debug('Moved: ' . $file['name'] . ' to: ' . $rrd_archive);
+							$archived++;
+						} else {
+							cacti_log($file['name'] . " ERROR: RRDfile Maintenance unable to move to $rrd_archive!", true, 'MAINT');
+						}
 					}
-
-					$archived++;
 
 					break;
 			}
