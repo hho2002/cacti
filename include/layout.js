@@ -2622,6 +2622,10 @@ function handleAjaxResponse(html, options) {
 
 	options = sanitizeAjaxOptions(options);
 
+	if (html.indexOf('cactiAuthArea') > 0) {
+		document.location = 'index.php';
+	}
+
 	if (options.handle && options.redirect.trim() == '') {
 		elementId = '#' + options.elementId;
 
@@ -2681,7 +2685,7 @@ function handleAjaxResponse(html, options) {
 			}
 		}
 
-		applySkin()
+		applySkin();
 
 		var scrollTop = (isMobile.any() != null) ? 1 : 0;
 
@@ -3709,7 +3713,12 @@ if (window.name == '') {
 	var max = 99999999;
 	var min = 10000000;
 	sessionStorage.tab = Math.floor(Math.random() * (max - min + 1) + min);
-	window.name = 'tab';
+	window.name = sessionStorage.tab;
+
+	if (urlPath != '') {
+		document.cookie = 'CactiTab=' + sessionStorage.tab + '; SameSite=None; Secure; Path=' + urlPath;
+	}
+
 	document.location = document.location.href;
 }
 
