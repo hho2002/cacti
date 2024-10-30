@@ -1457,7 +1457,7 @@ function cacti_log($string, $output = false, $environ = 'CMDPHP', $level = '') {
 		$database_log = false;
 	}
 
-	if (trim($string) == '') {
+	if ($string == '' || trim($string) == '') {
 		return false;
 	}
 
@@ -8274,6 +8274,10 @@ function cacti_session_start() {
 		die('PHP Session Management is missing, please install PHP Session module');
 	}
 
+	if (isset($_COOKIE['CactiTab'])) {
+		session_id(md5($_COOKIE['CactiTab']));
+	}
+
 	session_name($config[CACTI_SESSION_NAME]);
 
 	if (session_status() === PHP_SESSION_NONE) {
@@ -8284,7 +8288,7 @@ function cacti_session_start() {
 
 	/** @var array */
 	$session_options = $config[COOKIE_OPTIONS];
-	$session_result = session_start($session_options);
+	$session_result  = session_start($session_options);
 
 	if (!$session_result) {
 		cacti_log('Session "' . session_id() . '" ' . $session_restart . 'start failed! ' . cacti_debug_backtrace('', false, false, 0, 1), false, 'WARNING:');

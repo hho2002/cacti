@@ -119,6 +119,7 @@ window.onbeforeunload = renderLoading;
 function renderLoading() {
 	Pace.stop();
 	Pace.bar.render();
+	document.cookie = 'CactiTab=' + sessionStorage.tab + '; SameSite=None; Secure; Path=' + urlPath;
 }
 
 var isMobile = {
@@ -2459,6 +2460,8 @@ function loadPage(href, force) {
 }
 
 function loadUrl(options) {
+	document.cookie = 'CactiTab=' + sessionStorage.tab + '; SameSite=None; Secure; Path=' + urlPath;
+
 	statePushed = false;
 	cont = false;
 
@@ -2501,6 +2504,8 @@ function loadUrl(options) {
 }
 
 function postUrl(options, data) {
+	document.cookie = 'CactiTab=' + sessionStorage.tab + '; SameSite=None; Secure; Path=' + urlPath;
+
 	statePushed = false;
 	cont = false;
 
@@ -3697,6 +3702,14 @@ function tabsWrapping() {
 /* Graph related javascript functions */
 if (typeof urlPath == 'undefined') {
 	var urlPath = '';
+}
+
+/* Setup a session per tab */
+if (!sessionStorage.tab || window.name == '') {
+	var max = 99999999;
+	var min = 10000000;
+	sessionStorage.tab = Math.floor(Math.random() * (max - min + 1) + min);
+	window.name = 'tab';
 }
 
 var graphPage = urlPath + 'graph_view.php';
