@@ -1332,10 +1332,9 @@ function host_validate_vars() {
 			'default' => ''
 		),
 		'location' => array(
-			'filter'  => FILTER_CALLBACK,
+			'filter'  => FILTER_DEFAULT,
 			'pageset' => true,
 			'default' => '-1',
-			'options' => array('options' => 'sanitize_search_string')
 		),
 		'sort_column' => array(
 			'filter'  => FILTER_CALLBACK,
@@ -1405,7 +1404,7 @@ function get_device_records(&$total_rows, $rows) {
 		$host_where_disabled = "(IFNULL(TRIM(host.disabled), '') = 'on')";
 	}
 
-	$host_where_status   = get_request_var('host_status');
+	$host_where_status = get_request_var('host_status');
 
 	if ($host_where_status == '-1') {
 		/* Show all items */
@@ -1535,12 +1534,7 @@ function host() {
 
 								if (cacti_sizeof($sites)) {
 									foreach ($sites as $site) {
-										print "<option value='" . $site['id'] . "'";
-
-										if (get_request_var('site_id') == $site['id']) {
-											print ' selected';
-										}
-										print '>' . html_escape($site['name']) . '</option>';
+										print "<option value='" . $site['id'] . "'" . (get_request_var('site_id') == $site['id'] ? ' selected':'') . '>' . html_escape($site['name']) . '</option>';
 									}
 								}
 								?>
@@ -1557,12 +1551,7 @@ function host() {
 
 								if (cacti_sizeof($pollers)) {
 									foreach ($pollers as $poller) {
-										print "<option value='" . $poller['id'] . "'";
-
-										if (get_request_var('poller_id') == $poller['id']) {
-											print ' selected';
-										}
-										print '>' . html_escape($poller['name']) . '</option>';
+										print "<option value='" . $poller['id'] . "'" . (get_request_var('poller_id') == $poller['id'] ? ' selected':'') . '>' . html_escape($poller['name']) . '</option>';
 									}
 								}
 								?>
@@ -1583,12 +1572,7 @@ function host() {
 
 								if (cacti_sizeof($host_templates)) {
 									foreach ($host_templates as $host_template) {
-										print "<option value='" . $host_template['id'] . "'";
-
-										if (get_request_var('host_template_id') == $host_template['id']) {
-											print ' selected';
-										}
-										print '>' . html_escape($host_template['name']) . '</option>';
+										print "<option value='" . $host_template['id'] . "'" . (get_request_var('host_template_id') == $host_template['id'] ? ' selected':'') . '>' . html_escape($host_template['name']) . '</option>';
 									}
 								}
 								?>
@@ -1601,6 +1585,7 @@ function host() {
 							<select id='location' data-defaultLabel='<?php print __('Location'); ?>'>
 								<option value='-1' <?php if (get_request_var('location') == '-1') { ?> selected<?php } ?>><?php print __('All'); ?></option>
 								<?php
+
 								if (get_request_var('site_id') >= '0') {
 									$sql_where = 'WHERE site_id = ' . db_qstr(get_request_var('site_id'));
 								} else {
@@ -1615,12 +1600,7 @@ function host() {
 
 								if (cacti_sizeof($locations)) {
 									foreach ($locations as $l) {
-										print "<option value='" . $l['location'] . "'";
-
-										if (get_request_var('location') == $l['location']) {
-											print ' selected';
-										}
-										print '>' . html_escape($l['location']) . '</option>';
+										print "<option value='" . $l['location'] . "'" . (get_request_var('location') == $l['location'] ? ' selected':'') . '>' . html_escape($l['location']) . '</option>';
 									}
 								}
 								?>
@@ -1678,12 +1658,7 @@ function host() {
 
 								if (cacti_sizeof($options)) {
 									foreach ($options as $option) {
-										print "<option value='" . $option . "'";
-
-										if (get_request_var('availability_method') == $option) {
-											print ' selected';
-										}
-										print '>' . html_escape($availability_options[$option]) . '</option>';
+										print "<option value='" . $option . "'" . (get_request_var('availability_method') == $option ? ' selected':'') . '>' . html_escape($availability_options[$option]) . '</option>';
 									}
 								}
 								?>
@@ -1698,12 +1673,7 @@ function host() {
 									<?php
 									if (cacti_sizeof($item_rows)) {
 										foreach ($item_rows as $key => $value) {
-											print "<option value='" . $key . "'";
-
-											if (get_request_var('rows') == $key) {
-												print ' selected';
-											}
-											print '>' . html_escape($value) . '</option>';
+											print "<option value='" . $key . "'" . (get_request_var('rows') == $key ? ' selected':'') . '>' . html_escape($value) . '</option>';
 										}
 									}
 								?>
