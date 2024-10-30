@@ -729,7 +729,20 @@ function create_data_query_branch($leaf, $site_id = -1, $ht = -1) {
 
 	if (cacti_sizeof($data_queries)) {
 		if ($leaf['host_id'] > 0) {
-			$ntg = get_allowed_graphs('gl.host_id=' . $leaf['host_id'] . ' AND gl.snmp_query_id=0');
+			if (read_config_option('dsstats_enable') == 'on' && get_request_var('graph_source') != '' && get_request_var('graph_order') != '') {
+				$sql_order = array(
+					'data_source' => get_request_var('graph_source'),
+					'order'       => get_request_var('graph_order'),
+					'start_time'  => get_current_graph_start(),
+					'end_time'    => get_current_graph_end(),
+					'cf'          => 'avg',
+					'metric'      => 'average'
+				);
+			} else {
+				$sql_order = 'gtg.title_cache';
+			}
+
+			$ntg = get_allowed_graphs('gl.host_id=' . $leaf['host_id'] . ' AND gl.snmp_query_id=0', $sql_order);
 
 			if (read_user_setting('show_aggregates', 'on') == 'on') {
 				$agg = get_allowed_aggregate_graphs('gl.host_id=' . $leaf['host_id'] . ' AND gl.snmp_query_id=0');
@@ -737,7 +750,20 @@ function create_data_query_branch($leaf, $site_id = -1, $ht = -1) {
 				$agg = array();
 			}
 		} else {
-			$ntg = get_allowed_graphs('gl.snmp_query_id=0');
+			if (read_config_option('dsstats_enable') == 'on' && get_request_var('graph_source') != '' && get_request_var('graph_order') != '') {
+				$sql_order = array(
+					'data_source' => get_request_var('graph_source'),
+					'order'       => get_request_var('graph_order'),
+					'start_time'  => get_current_graph_start(),
+					'end_time'    => get_current_graph_end(),
+					'cf'          => 'avg',
+					'metric'      => 'average'
+				);
+			} else {
+				$sql_order = 'gtg.title_cache';
+			}
+
+			$ntg = get_allowed_graphs('gl.snmp_query_id=0', $sql_order);
 
 			if (read_user_setting('show_aggregates', 'on') == 'on') {
 				$agg = get_allowed_aggregate_graphs('gl.snmp_query_id=0');

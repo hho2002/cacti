@@ -504,8 +504,7 @@ switch (get_nfilter_request_var('action')) {
 			$sql_where .= ($sql_where != '' ? ' AND ':'') . ' (gl.graph_template_id IN (' . get_request_var('graph_template_id') . '))';
 		}
 
-		$limit  = (get_request_var('graphs') * (get_request_var('page') - 1)) . ',' . get_request_var('graphs');
-		$sql_order  = 'gtg.title_cache';
+		$sql_limit = (get_request_var('graphs') * (get_request_var('page') - 1)) . ',' . get_request_var('graphs');
 
 		if (read_config_option('dsstats_enable') == 'on' && get_request_var('graph_source') != '' && get_request_var('graph_order') != '') {
 			$sql_order = array(
@@ -516,10 +515,11 @@ switch (get_nfilter_request_var('action')) {
 				'cf'          => 'avg',
 				'metric'      => 'average'
 			);
+		} else {
+			$sql_order  = 'gtg.title_cache';
 		}
 
-
-		$graphs = get_allowed_graphs($sql_where, $sql_order, $limit, $total_graphs);
+		$graphs = get_allowed_graphs($sql_where, $sql_order, $sql_limit, $total_graphs);
 
 		$nav = html_nav_bar('graph_view.php', MAX_DISPLAY_PAGES, get_request_var('page'), get_request_var('graphs'), $total_graphs, get_request_var('columns'), __('Graphs'), 'page', 'main');
 
@@ -818,9 +818,9 @@ switch (get_nfilter_request_var('action')) {
 		}
 
 		$total_rows = 0;
-		$limit      = ($rows * (get_request_var('page') - 1)) . ',' . $rows;
+		$sql_limit  = ($rows * (get_request_var('page') - 1)) . ',' . $rows;
 
-		$graphs = get_allowed_graphs($sql_where, 'gtg.title_cache', $limit, $total_rows);
+		$graphs = get_allowed_graphs($sql_where, 'gtg.title_cache', $sql_limit, $total_rows);
 
 		$nav = html_nav_bar('graph_view.php?action=list', MAX_DISPLAY_PAGES, get_request_var('page'), $rows, $total_rows, 5, __('Graphs'), 'page', 'main');
 
