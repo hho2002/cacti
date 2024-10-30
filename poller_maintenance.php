@@ -641,10 +641,10 @@ function remove_files($file_array) {
 
 					if (file_exists($real_file)) {
 						if (rename($real_file, $target_file)) {
-							maint_debug("Moved: $real_file to: $rrd_archive");
+							maint_debug("Moved: $real_file to: $target_file");
 							$archived++;
 						} else {
-							cacti_log("WARNING: RRDfile Maintenance is unable to move $real_file to $rrd_archive!", true, 'MAINT');
+							cacti_log("WARNING: RRDfile Maintenance is unable to move $real_file to $target_file!", true, 'MAINT');
 						}
 					}
 
@@ -728,7 +728,7 @@ function rrdclean_create_path($path) {
 	global $config;
 
 	if (!is_dir($path)) {
-		if (mkdir($path, 0775)) {
+		if (mkdir($path, 0775, true)) {
 			if ($config['cacti_server_os'] != 'win32') {
 				$owner_id      = fileowner(CACTI_PATH_RRA);
 				$group_id      = filegroup(CACTI_PATH_RRA);
