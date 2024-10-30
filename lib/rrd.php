@@ -407,8 +407,6 @@ function __rrd_execute($command_line, $log_to_stdout, $output_flag, $rrdtool_pip
 				proc_close($process);
 			}
 
-
-
 			rrdtool_trim_output($output);
 
 			return $output;
@@ -416,14 +414,16 @@ function __rrd_execute($command_line, $log_to_stdout, $output_flag, $rrdtool_pip
 			break;
 		case RRDTOOL_OUTPUT_STDERR:
 		case RRDTOOL_OUTPUT_RETURN_STDERR:
-			$output = fgets($fp, 1000000);
+			$output = '';
+
+			while (!feof($fp)) {
+				$output .= fgets($fp, 4096);
+			}
 
 			if (isset($process)) {
 				fclose($fp);
 				proc_close($process);
 			}
-
-			rrdtool_trim_output($output);
 
 			if (substr($output, 1, 3) == 'PNG') {
 				return 'OK';
@@ -4166,15 +4166,15 @@ function rrdtool_create_error_image($string, $width = '', $height = '') {
 		include($themefile);
 
 		if (isset($rrdfonts['legend']['size'])) {
-			$font_size   = $rrdfonts['legend']['size'];
+			$font_size = $rrdfonts['legend']['size'];
 		}
 
 		if (isset($rrdcolors['font'])) {
-			$font_color  = $rrdcolors['font'];
+			$font_color = $rrdcolors['font'];
 		}
 
 		if (isset($rrdcolors['canvas'])) {
-			$back_color  = $rrdcolors['canvas'];
+			$back_color = $rrdcolors['canvas'];
 		}
 
 		if (isset($rrdcolors['shadea'])) {
@@ -4195,7 +4195,9 @@ function rrdtool_create_error_image($string, $width = '', $height = '') {
 
 	/* background the entire image with the frame */
 	list($red, $green, $blue) = sscanf($shadeb, '%02x%02x%02x');
-	$shadeb                   = imagecolorallocate($image, $red, $green, $blue);
+
+	$shadeb = imagecolorallocate($image, $red, $green, $blue);
+
 	imagefill($image, 0, 0, $shadeb);
 
 	/* set the background color */
