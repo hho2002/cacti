@@ -2557,6 +2557,7 @@ CREATE TABLE settings (
 
 INSERT INTO settings VALUES ('auth_method', 1);
 INSERT INTO settings VALUES ('selected_theme', 'modern');
+INSERT INTO settings VALUES ('auth_cache_enabled', 'on');
 
 --
 -- Table structure for table `settings_user`

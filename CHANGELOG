@@ -109,6 +109,7 @@ Cacti CHANGELOG
 -feature#5862: Change logging message around remote agent timeout
 -feature#5871: Make it possible for splice_rrd.php to run from outside of Cacti
 -feature#5889: Make it so that Cacti does not share sessions between browser tabs
+-feature#5892: Enable Authentication Cookies by Default in New Installs
 -feature: Allow messages to be popup notifications
 -feature: Upgrade billboard.js to version 3.7.4
 -feature: Upgrade d3.js to version 7.8.2
