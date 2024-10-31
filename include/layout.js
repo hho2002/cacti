@@ -4568,6 +4568,7 @@ function makeCallbacks() {
 		var dcClickId = Id + '_click';
 		var dcInput   = dcId + '_input';
 		var dcInputId = Id + '_input';
+		var dcDisable = $(dcId).hasClass('ui-state-disabled');
 
 		var dcInputFields = 'input' + dcId + '_input';
 
@@ -4581,7 +4582,7 @@ function makeCallbacks() {
 			value = title;
 		}
 
-		var dialogForm = "<span id='" + dcWrapId + "' class='ui-selectmenu-button ui-selectmenu-button-closed ui-corner-all ui-button ui-widget'>";
+		var dialogForm = "<span id='" + dcWrapId + "' class='ui-selectmenu-button ui-selectmenu-button-closed ui-corner-all ui-button ui-widget" + (dcDisable ? ' ui-selectmenu-disabled ui-state-disabled':'') + "'>";
 		dialogForm    += "<span id='" + dcClickId + "' style='z-index:4' class='ui-selectmenu-icon ui-icon ui-icon-triangle-1-s'></span>";
 		dialogForm    += "<span class='ui-select-text'>";
 		dialogForm    += "<input type='text' class='ui-state-default ui-corner-all' id='" + dcInputId + "' value='" + value + "'>";

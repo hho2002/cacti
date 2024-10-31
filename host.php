@@ -435,11 +435,6 @@ function form_actions() {
 						'class'         => 'ui-state-disabled',
 						'value'         => ''
 					);
-
-					$form_array['location']['method']     = 'textbox';
-					$form_array['location']['default']    = '';
-					$form_array['location']['size']       = '20';
-					$form_array['location']['max_length'] = '40';
 				}
 			}
 
@@ -1064,7 +1059,11 @@ function device_change_javascript() {
 	?>
 	<script type="text/javascript">
 		function disableField(id) {
-			$('#' + id).prop('disabled', true).addClass('ui-state-disabled');;
+			$('#' + id).prop('disabled', true).addClass('ui-state-disabled');
+
+			if (id == 'location') {
+				$('#location_wrap').prop('disabled', true).addClass('ui-selectmenu-disabled ui-state-disabled');
+			}
 
 			if ($('#' + id).button('instance')) {
 				$('#' + id).button('disable');
@@ -1075,6 +1074,10 @@ function device_change_javascript() {
 
 		function enableField(id) {
 			$('#' + id).prop('disabled', false).removeClass('ui-state-disabled');
+
+			if (id == 'location') {
+				$('#location_wrap').prop('disabled', false).removeClass('ui-selectmenu-disabled ui-state-disabled');
+			}
 
 			if ($('#' + id).button('instance')) {
 				$('#' + id).button('enable');
