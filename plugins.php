@@ -65,7 +65,7 @@ $modes = array(
 );
 
 if (get_nfilter_request_var('action') == 'latest') {
-	plugins_fetch_latest_plugins_list();
+	plugins_fetch_latest_plugins();
 	header('Location: plugins.php');
 	exit;
 }
@@ -506,7 +506,7 @@ function update_show_current() {
 							<option value='5'<?php if (get_request_var('state') == '5') {?> selected<?php }?>><?php print __('Active/Installed');?></option>
 							<option value='2'<?php if (get_request_var('state') == '2') {?> selected<?php }?>><?php print __('Configuration Issues');?></option>
 							<option value='0'<?php if (get_request_var('state') == '0') {?> selected<?php }?>><?php print __('Not Installed');?></option>
-							<option value='6'<?php if (get_request_var('state') == '6') {?> selected<?php }?>><?php print __('Not Downloaded');?></option>
+							<option value='6'<?php if (get_request_var('state') == '6') {?> selected<?php }?>><?php print __('Available');?></option>
 						</select>
 					</td>
 					<td>
@@ -518,14 +518,10 @@ function update_show_current() {
 							<?php
 							if (cacti_sizeof($item_rows) > 0) {
 								foreach ($item_rows as $key => $value) {
-									print "<option value='" . $key . "'";
-
-									if (get_request_var('rows') == $key) {
-										print ' selected';
-									} print '>' . html_escape($value) . "</option>\n";
+									print "<option value='" . $key . "'" . (get_request_var('rows') == $key ? ' selected':'') . '>' . html_escape($value) . '</option>';
 								}
 							}
-	?>
+							?>
 						</select>
 					</td>
 					<td>
@@ -998,7 +994,7 @@ function plugin_actions($plugin, $table) {
 	return $link;
 }
 
-function plugins_fetch_latest_plugins_list() {
+function plugins_fetch_latest_plugins() {
 	$start = microtime(true);
 
 	if (!db_table_exists('plugin_available')) {
@@ -1011,6 +1007,7 @@ function plugins_fetch_latest_plugins_list() {
 			info blob,
 			readme blob,
 			changelog blob,
+			archive longblob,
 			last_updated timestamp default current_timestamp on update current_timestamp,
 			primary key (name, tag_name))
 			ENGINE=InnoDB
@@ -1056,18 +1053,25 @@ function plugins_fetch_latest_plugins_list() {
 					$files = array(
 						'changelog' => "https://api.github.com/repos/cacti/plugin_{$name}/contents/CHANGELOG.md?ref={$json_data[0]['tag_name']}",
 						'readme'    => "https://api.github.com/repos/cacti/plugin_{$name}/contents/README.md?ref={$json_data[0]['tag_name']}",
-						'info'      => "https://api.github.com/repos/cacti/plugin_{$name}/contents/INFO?ref={$json_data[0]['tag_name']}"
+						'info'      => "https://api.github.com/repos/cacti/plugin_{$name}/contents/INFO?ref={$json_data[0]['tag_name']}",
+						'archive'   => "https://api.github.com/repos/cacti/plugin_{$name}/tarball?ref={$json_data[0]['tag_name']}"
 					);
 
 					$ofiles = array();
 
 					foreach($files as $file => $url) {
-						$file_details = plugins_make_github_request($url, 'json');
+						if ($file != 'archive') {
+							$file_details = plugins_make_github_request($url, 'json');
 
-						if (isset($file_details['content'])) {
-							$ofiles[$file] = base64_decode($file_details['content']);
+							if (isset($file_details['content'])) {
+								$ofiles[$file] = base64_decode($file_details['content']);
+							} else {
+								$ofiles[$file] = '';
+							}
 						} else {
-							$ofiles[$file] = '';
+							$file_details = plugins_make_github_request($url, 'file');
+
+							$ofiles[$file] = $file_details;
 						}
 					}
 
@@ -1084,26 +1088,33 @@ function plugins_fetch_latest_plugins_list() {
 					}
 
 					db_execute_prepared('REPLACE INTO plugin_available
-						(name, tag_name, compat, published_at, body, info, readme, changelog) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-						array($name, $json_data[0]['tag_name'], $compat, $json_data[0]['published_at'], $json_data[0]['body'], $ofiles['info'], $ofiles['readme'], $ofiles['changelog']));
+						(name, tag_name, compat, published_at, body, info, readme, changelog, archive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+						array($name, $json_data[0]['tag_name'], $compat, $json_data[0]['published_at'], $json_data[0]['body'], $ofiles['info'], $ofiles['readme'], $ofiles['changelog'], $ofiles['archive']));
 				}
 
 				/* insert develop */
 				$files = array(
 					'changelog' => "https://api.github.com/repos/cacti/plugin_{$name}/contents/CHANGELOG.md?ref=develop",
 					'readme'    => "https://api.github.com/repos/cacti/plugin_{$name}/contents/README.md?ref=develop",
-					'info'      => "https://api.github.com/repos/cacti/plugin_{$name}/contents/INFO?ref=develop"
+					'info'      => "https://api.github.com/repos/cacti/plugin_{$name}/contents/INFO?ref=develop",
+					'archive'   => "https://api.github.com/repos/cacti/plugin_{$name}/tarball?ref=develop"
 				);
 
 				$ofiles = array();
 
 				foreach($files as $file => $url) {
-					$file_details = plugins_make_github_request($url, 'json');
+					if ($file != 'archive') {
+						$file_details = plugins_make_github_request($url, 'json');
 
-					if (isset($file_details['content'])) {
-						$ofiles[$file] = base64_decode($file_details['content']);
+						if (isset($file_details['content'])) {
+							$ofiles[$file] = base64_decode($file_details['content']);
+						} else {
+							$ofiles[$file] = '';
+						}
 					} else {
-						$ofiles[$file] = '';
+						$file_details = plugins_make_github_request($url, 'file');
+
+						$ofiles[$file] = $file_details;
 					}
 				}
 
@@ -1120,8 +1131,8 @@ function plugins_fetch_latest_plugins_list() {
 				}
 
 				db_execute_prepared('REPLACE INTO plugin_available
-					(name, tag_name, compat, published_at, body, info, readme, changelog) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-					array($name, 'develop', $compat, NULL, '', $ofiles['info'], $ofiles['readme'], $ofiles['changelog']));
+					(name, tag_name, compat, published_at, body, info, readme, changelog, archive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+					array($name, 'develop', $compat, NULL, '', $ofiles['info'], $ofiles['readme'], $ofiles['changelog'], $ofiles['archive']));
 			}
 		}
 	}
@@ -1156,6 +1167,14 @@ function plugins_make_github_request($url, $type = 'json') {
 
 		if ($type == 'json') {
 			$headers[] = 'Content-Type: application/json';
+		} elseif ($type == 'file') {
+			$file = sys_get_temp_dir() . '/curlfile.output.' . rand() . '.tgz';
+
+			$fh = fopen($file, 'w');
+
+			curl_setopt($ch, CURLOPT_FILE, $fh);
+			curl_setopt($ch, CURLOPT_AUTOREFERER, true);
+			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 		}
 
 		if ($use_pat) {
@@ -1166,16 +1185,27 @@ function plugins_make_github_request($url, $type = 'json') {
 
 		$data = curl_exec($ch);
 
+		$error = curl_errno($ch);
+
 		curl_close($ch);
 
-		if ($data != '') {
+		if ($error == 0) {
 			if ($type == 'json') {
 				return json_decode($data, true);;
-			} else {
+			} elseif ($type == 'raw') {
+				return $data;
+			} elseif ($type == 'file') {
+				fclose($fh);
+
+				$data = file_get_contents($file);
+
+				unlink($file);
+
 				return $data;
 			}
 		} else {
-			return array();
+			cacti_log("Curl Experienced an error with url:$url");
+			return false;
 		}
 	}
 }
