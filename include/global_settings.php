@@ -562,6 +562,15 @@ $settings['general'] = array(
 		'method'        => 'checkbox',
 		'default'       => 'on',
 	),
+	'personal_access_token' => array(
+		'friendly_name' => __('GitHub Personal Access Token'),
+		'description'   => __('If you wish to get the latest plguins versions directly from GitHub without overly restricted rate limiting, enter your Personal Access Token here.'),
+		'method'        => 'textbox_password',
+		'default'       => '',
+		'noconfirm'     => true,
+		'size'          => '100',
+		'max_length'    => '255',
+	),
 	'security_header' => array(
 		'friendly_name' => __('Site Security'),
 		'method'        => 'spacer',
