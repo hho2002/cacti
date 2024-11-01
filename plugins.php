@@ -42,6 +42,8 @@ $status_names = array(
 	4  => __('Installed')
 );
 
+set_default_action();
+
 /* get the comprehensive list of plugins */
 $pluginslist = retrieve_plugin_list();
 
@@ -50,6 +52,7 @@ $modes = array(
 	'installold',
 	'uninstallold',
 	'install',
+	'download',
 	'uninstall',
 	'disable',
 	'enable',
@@ -61,6 +64,12 @@ $modes = array(
 	'movedown'
 );
 
+if (get_nfilter_request_var('action') == 'latest') {
+	plugins_fetch_latest_plugins_list();
+	header('Location: plugins.php');
+	exit;
+}
+
 if (isset_request_var('mode') && in_array(get_nfilter_request_var('mode'), $modes, true) && isset_request_var('id')) {
 	get_filter_request_var('id', FILTER_VALIDATE_REGEXP, array('options' => array('regexp' => '/^([a-zA-Z0-9 _]+)$/')));
 
@@ -68,6 +77,8 @@ if (isset_request_var('mode') && in_array(get_nfilter_request_var('mode'), $mode
 	$id   = sanitize_search_string(get_request_var('id'));
 
 	switch ($mode) {
+		case 'download':
+			break;
 		case 'install':
 			if (!in_array($id, $plugins_integrated, true)) {
 				api_plugin_install($id);
@@ -456,6 +467,11 @@ function update_show_current() {
 			clearFilter();
 		});
 
+		$('#latest').click(function() {
+			strURL = 'plugins.php?action=latest&nostate=true';
+			loadUrl({url:strURL});
+		});
+
 		$('#form_plugins').submit(function(event) {
 			event.preventDefault();
 			applyFilter();
@@ -490,6 +506,7 @@ function update_show_current() {
 							<option value='5'<?php if (get_request_var('state') == '5') {?> selected<?php }?>><?php print __('Active/Installed');?></option>
 							<option value='2'<?php if (get_request_var('state') == '2') {?> selected<?php }?>><?php print __('Configuration Issues');?></option>
 							<option value='0'<?php if (get_request_var('state') == '0') {?> selected<?php }?>><?php print __('Not Installed');?></option>
+							<option value='6'<?php if (get_request_var('state') == '6') {?> selected<?php }?>><?php print __('Not Downloaded');?></option>
 						</select>
 					</td>
 					<td>
@@ -515,6 +532,7 @@ function update_show_current() {
 						<span>
 							<input type='button' class='ui-button ui-corner-all ui-widget' id='refresh' value='<?php print __esc('Go');?>' title='<?php print __esc('Set/Refresh Filters');?>'>
 							<input type='button' class='ui-button ui-corner-all ui-widget' id='clear' value='<?php print __esc('Clear');?>' title='<?php print __esc('Clear Filters');?>'>
+							<input type='button' class='ui-button ui-corner-all ui-widget' id='latest' value='<?php print __esc('Check Latest');?>' title='<?php print __esc('Fetch the list of the latest Cacti Plugins');?>'>
 						</span>
 					</td>
 				</tr>
@@ -979,3 +997,186 @@ function plugin_actions($plugin, $table) {
 
 	return $link;
 }
+
+function plugins_fetch_latest_plugins_list() {
+	$start = microtime(true);
+
+	if (!db_table_exists('plugin_available')) {
+		db_execute_prepared('CREATE TABLE plugin_available (
+			name varchar(20) NOT NULL default "0",
+			tag_name varchar(20) NOT NULL default "",
+			published_at TIMESTAMP DEFAULT NULL,
+			compat varchar(20) NOT NULL default "",
+			body blob,
+			info blob,
+			readme blob,
+			changelog blob,
+			last_updated timestamp default current_timestamp on update current_timestamp,
+			primary key (name, tag_name))
+			ENGINE=InnoDB
+			ROW_FORMAT=Dynamic');
+	}
+
+	$pat = read_config_option('personal_access_token');
+
+	$use_pat = false;
+	if ($pat != '') {
+		$use_pat = true;
+	}
+
+	$avail_plugins = array();
+
+	$plugins = plugins_make_github_request('https://api.github.com/users/cacti/repos', 'json');
+
+	if (cacti_sizeof($plugins)) {
+		foreach($plugins as $pi) {
+			if (isset($pi['full_name'])) {
+				if (strpos($pi['full_name'], 'plugin_') !== false) {
+					$plugin = explode('plugin_', $pi['full_name'])[1];
+
+					$avail_plugins[$plugin]['name'] = $plugin;
+				}
+			}
+		}
+	}
+
+	if (cacti_sizeof($avail_plugins)) {
+		foreach($avail_plugins as $name => $pi_details) {
+			$details = plugins_make_github_request("https://api.github.com/repos/cacti/plugin_{$name}/releases", 'json');
+
+			if (cacti_sizeof($details)) {
+				$json_data = $details;
+
+				/* insert latest release */
+				if (isset($json_data[0]['tag_name'])) {
+					$avail_plugins[$name]['latest']       = $json_data[0]['tag_name'];
+					$avail_plugins[$name]['body']         = $json_data[0]['body'];
+					$avail_plugins[$name]['published_at'] = $json_data[0]['published_at'];
+
+					$files = array(
+						'changelog' => "https://api.github.com/repos/cacti/plugin_{$name}/contents/CHANGELOG.md?ref={$json_data[0]['tag_name']}",
+						'readme'    => "https://api.github.com/repos/cacti/plugin_{$name}/contents/README.md?ref={$json_data[0]['tag_name']}",
+						'info'      => "https://api.github.com/repos/cacti/plugin_{$name}/contents/INFO?ref={$json_data[0]['tag_name']}"
+					);
+
+					$ofiles = array();
+
+					foreach($files as $file => $url) {
+						$file_details = plugins_make_github_request($url, 'json');
+
+						if (isset($file_details['content'])) {
+							$ofiles[$file] = base64_decode($file_details['content']);
+						} else {
+							$ofiles[$file] = '';
+						}
+					}
+
+					$compat = '';
+					if ($ofiles['info'] != '') {
+						$lines = explode("\n", $ofiles['info']);
+
+						foreach($lines as $l) {
+							if (strpos($l, 'compat ') !== false) {
+								$compat = trim(explode('=', $l)[1]);
+								break;
+							}
+						}
+					}
+
+					db_execute_prepared('REPLACE INTO plugin_available
+						(name, tag_name, compat, published_at, body, info, readme, changelog) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+						array($name, $json_data[0]['tag_name'], $compat, $json_data[0]['published_at'], $json_data[0]['body'], $ofiles['info'], $ofiles['readme'], $ofiles['changelog']));
+				}
+
+				/* insert develop */
+				$files = array(
+					'changelog' => "https://api.github.com/repos/cacti/plugin_{$name}/contents/CHANGELOG.md?ref=develop",
+					'readme'    => "https://api.github.com/repos/cacti/plugin_{$name}/contents/README.md?ref=develop",
+					'info'      => "https://api.github.com/repos/cacti/plugin_{$name}/contents/INFO?ref=develop"
+				);
+
+				$ofiles = array();
+
+				foreach($files as $file => $url) {
+					$file_details = plugins_make_github_request($url, 'json');
+
+					if (isset($file_details['content'])) {
+						$ofiles[$file] = base64_decode($file_details['content']);
+					} else {
+						$ofiles[$file] = '';
+					}
+				}
+
+				$compat = '';
+				if ($ofiles['info'] != '') {
+					$lines = explode("\n", $ofiles['info']);
+
+					foreach($lines as $l) {
+						if (strpos($l, 'compat ') !== false) {
+							$compat = trim(explode('=', $l)[1]);
+							break;
+						}
+					}
+				}
+
+				db_execute_prepared('REPLACE INTO plugin_available
+					(name, tag_name, compat, published_at, body, info, readme, changelog) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+					array($name, 'develop', $compat, NULL, '', $ofiles['info'], $ofiles['readme'], $ofiles['changelog']));
+			}
+		}
+	}
+
+	$end = microtime(true);
+
+	if (cacti_sizeof($avail_plugins)) {
+		raise_message('plugins_fetched', __('There were %s plugins found at The Cacti Groups github site retrieved in %0.2f seconds.', cacti_sizeof($avail_plugins), $end - $start), MESSAGE_LEVEL_INFO);
+	} else {
+		raise_message('plugins_fetched', __('Unable to reach The Cacti Groups github site.  No plugin data retrieved in %0.2f seconds.', $end-$start), MESSAGE_LEVEL_WARN);
+	}
+
+	return $avail_plugins;
+}
+
+function plugins_make_github_request($url, $type = 'json') {
+	$pat = read_config_option('personal_access_token');
+
+	$use_pat = false;
+	if ($pat != '') {
+		$use_pat = true;
+	}
+
+	$ch = curl_init();
+
+	if ($ch) {
+		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_USERAGENT, 'CactiServer ' . CACTI_VERSION);
+
+		$header[] = 'X-GitHub-Api-Version: 2022-11-28';
+
+		if ($type == 'json') {
+			$headers[] = 'Content-Type: application/json';
+		}
+
+		if ($use_pat) {
+			$headers[] = "Authorization: Bearer $pat";
+		}
+
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+		$data = curl_exec($ch);
+
+		curl_close($ch);
+
+		if ($data != '') {
+			if ($type == 'json') {
+				return json_decode($data, true);;
+			} else {
+				return $data;
+			}
+		} else {
+			return array();
+		}
+	}
+}
+
