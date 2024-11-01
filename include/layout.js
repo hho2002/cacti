@@ -2234,19 +2234,24 @@ function menuHide(store) {
 function menuShow() {
 	var myClass = '';
 
-	if (!userMenuNavigationExists(pageName) && pageName != 'graph_view.php' && pageName != 'about.php') {
-		$('#navigation').hide();
-		return;
+	if (!userMenuNavigationExists(pageName)) {
+		if (pageName != 'graph_view.php' && pageName != 'about.php') {
+			$('#navigation').hide();
+			return;
+		}
+	} else if (pageName == 'index.php') {
+		marginLeftConsole = $('#navigation').width();
 	}
 
 	if ($('.cactiTreeNavigationArea').length) {
+		myClass = '.cactiTreeNavigationArea';
+
 		if (marginLeftTree == null) {
 			marginLeftTree = minTreeWidth;
 		}
 
 		var treeWidth = $('.cactiTreeNavigationArea').width();
 
-		myClass = '.cactiTreeNavigationArea';
 
 		if (marginLeftTree > treeWidth) {
 			$('#navigation_right').animate({ 'margin-left': marginLeftTree }, 20);
@@ -2346,6 +2351,8 @@ function loadTopTabEnd(options) {
 			tabElement.addClass('selected');
 		}
 	}
+
+	handleUserMenu();
 }
 
 function userMenuNavigationExists(url) {
