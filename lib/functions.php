@@ -8274,10 +8274,6 @@ function cacti_session_start() {
 		die('PHP Session Management is missing, please install PHP Session module');
 	}
 
-	if (isset($_COOKIE['CactiTab'])) {
-		session_id(md5($_COOKIE['CactiTab']));
-	}
-
 	session_name($config[CACTI_SESSION_NAME]);
 
 	if (session_status() === PHP_SESSION_NONE) {

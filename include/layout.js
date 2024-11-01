@@ -119,7 +119,7 @@ window.onbeforeunload = renderLoading;
 function renderLoading() {
 	Pace.stop();
 	Pace.bar.render();
-	document.cookie = 'CactiTab=' + sessionStorage.tab + '; SameSite=None; Secure; Path=' + urlPath;
+	setCactiTabCookie();
 }
 
 var isMobile = {
@@ -2460,7 +2460,7 @@ function loadPage(href, force) {
 }
 
 function loadUrl(options) {
-	document.cookie = 'CactiTab=' + sessionStorage.tab + '; SameSite=None; Secure; Path=' + urlPath;
+	setCactiTabCookie();
 
 	statePushed = false;
 	cont = false;
@@ -2504,7 +2504,7 @@ function loadUrl(options) {
 }
 
 function postUrl(options, data) {
-	document.cookie = 'CactiTab=' + sessionStorage.tab + '; SameSite=None; Secure; Path=' + urlPath;
+	setCactiTabCookie();
 
 	statePushed = false;
 	cont = false;
@@ -3224,10 +3224,9 @@ function clearAllTimeouts() {
 function setZoneInfo() {
 	var dt = new Date();
 	var tz = -dt.getTimezoneOffset();
-	var maxAge = 365 * 86400;
 
-	var CactiDateTime = 'CactiDateTime=' + dt.toString() + '; Max-Age=' + maxAge + '; path=' + urlPath + '; SameSite=Strict;';
-	var CactiTimeZone = 'CactiTimeZone=' + tz.toString() + '; Max-Age=' + maxAge + '; path=' + urlPath + '; SameSite=Strict;';
+	var CactiDateTime = 'CactiDateTime=' + dt.toString() + '; Max-Age: -1; path=' + urlPath + '; SameSite=Strict;';
+	var CactiTimeZone = 'CactiTimeZone=' + tz.toString() + '; Max-Age: -1; path=' + urlPath + '; SameSite=Strict;';
 
 	if (window.location.protocol == 'https:') {
 		CactiDateTime += ' Secure;';
@@ -3716,7 +3715,7 @@ if (window.name == '') {
 	window.name = sessionStorage.tab;
 
 	if (urlPath != '') {
-		document.cookie = 'CactiTab=' + sessionStorage.tab + '; SameSite=None; Secure; Path=' + urlPath;
+		setCactiTabCookie();
 	}
 
 	document.location = document.location.href;
@@ -3727,6 +3726,10 @@ var pageAction = 'preview';
 
 function checkForLogout(data) {
 	checkForRedirects(data, null);
+}
+
+function setCactiTabCookie() {
+	document.cookie = 'CactiTab=' + sessionStorage.tab + '; SameSite=None; Max-Age: -1; Secure; Path=' + urlPath;
 }
 
 function checkForRedirects(data, href) {

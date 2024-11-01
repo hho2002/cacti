@@ -97,6 +97,9 @@ $database_persist    = true;
 
 /* Default session name - Session name must contain alpha characters */
 $cacti_session_name = 'Cacti';
+if (isset($_COOKIE['CactiTab'])) {
+	$cacti_session_name = 'CactiTabId:' . $_COOKIE['CactiTab'];
+}
 
 /* define default url path */
 $url_path = '/cacti/';

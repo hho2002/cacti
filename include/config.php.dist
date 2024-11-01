@@ -78,8 +78,10 @@ $url_path = '/cacti/';
 /*
  * Default session name - session name must contain alpha characters
  */
-
 $cacti_session_name = 'Cacti';
+if (isset($_COOKIE['CactiTab'])) {
+	$cacti_session_name = 'CactiTabId:' . $_COOKIE['CactiTab'];
+}
 
 /*
  * Default Cookie domain - The cookie domain to be used for Cacti
