@@ -2595,13 +2595,15 @@ function rrdtool_function_graph($local_graph_id, $rra_id, $graph_data_array, $rr
 					/* give all export items a name */
 					if (trim($graph_variables['text_format'][$graph_item_id]) == '') {
 						$legend_name = $legends[$graph_item['local_data_id']][$consolidation_functions[$graph_cf]];
-						//$legend_name = 'col' . $j . '-' . $data_source_name;
 					} else {
 						$legend_name = $legends[$graph_item['local_data_id']][$consolidation_functions[$graph_cf]];
-						//$legend_name = $graph_variables['text_format'][$graph_item_id];
 					}
 
-					$stacked_columns['col' . $j] = ($graph_item_types[$graph_item['graph_type_id']] == 'STACK') ? 1 : 0;
+					if ($legend_name == '') {
+						$legend_name = 'col' . $j . '-' . $data_source_name;
+					}
+
+					$stacked_columns[$legend_name] = ($graph_item_types[$graph_item['graph_type_id']] == 'STACK') ? 1 : 0;
 					$j++;
 
 					$txt_graph_items .= 'XPORT:' . cacti_escapeshellarg($data_source_name) . ':' . str_replace(':', '', cacti_escapeshellarg($legend_name));
