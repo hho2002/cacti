@@ -886,7 +886,7 @@ function plugin_actions($plugin, $table) {
 
 			$link .= "<i class='fa fa-cog' style='color:transparent'></i>";
 
-			$setup_file = CACTI_BASE_PATH . '/plugins/' . $plugin['directory'] . '/setup.php';
+			$setup_file = CACTI_PATH_BASE . '/plugins/' . $plugin['directory'] . '/setup.php';
 
 			if (file_exists($setup_file)) {
 				require_once($setup_file);
