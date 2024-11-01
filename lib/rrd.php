@@ -1780,7 +1780,7 @@ function rrdtool_function_graph($local_graph_id, $rra_id, $graph_data_array, $rr
 
 					$cf_ds_cache[$graph_item['data_template_rrd_id']][$graph_cf] = "$i";
 
-					$legends[$graph_item['local_data_id']][$consolidation_functions[$graph_cf]] = $graph_item['data_source_name'] . ' (' . $consolidation_functions[$graph_cf] . ')';
+					$legends[$graph_item['local_data_id']][$graph_item['data_source_name']][$consolidation_functions[$graph_cf]] = $graph_item['data_source_name'] . ' (' . $consolidation_functions[$graph_cf] . ')';
 
 					$i++;
 				}
@@ -2478,7 +2478,7 @@ function rrdtool_function_graph($local_graph_id, $rra_id, $graph_data_array, $rr
 						if ($graph_variables['text_format'][$graph_item_id] != '') {
 							$text_format = rrdtool_escape_string(html_escape(str_pad($graph_variables['text_format'][$graph_item_id], $pad_number)));
 						} elseif (isset($graph_data_array['graph_nolegend'])) {
-							$text_format = $legends[$graph_item['local_data_id']][$consolidation_functions[$graph_cf]];
+							$text_format = $legends[$graph_item['local_data_id']][$graph_item['data_source_name']][$consolidation_functions[$graph_cf]];
 						} else {
 							$text_format = '';
 						}
@@ -2501,7 +2501,7 @@ function rrdtool_function_graph($local_graph_id, $rra_id, $graph_data_array, $rr
 						if ($graph_variables['text_format'][$graph_item_id] != '') {
 							$text_format = rrdtool_escape_string(html_escape(str_pad($graph_variables['text_format'][$graph_item_id], $pad_number)));
 						} elseif (isset($graph_data_array['graph_nolegend'])) {
-							$text_format = $legends[$graph_item['local_data_id']][$consolidation_functions[$graph_cf]];
+							$text_format = $legends[$graph_item['local_data_id']][$graph_item['data_source_name']][$consolidation_functions[$graph_cf]];
 						} else {
 							$text_format = '';
 						}
@@ -2518,7 +2518,7 @@ function rrdtool_function_graph($local_graph_id, $rra_id, $graph_data_array, $rr
 						if ($graph_variables['text_format'][$graph_item_id] != '') {
 							$text_format = rrdtool_escape_string(html_escape(str_pad($graph_variables['text_format'][$graph_item_id], $pad_number)));
 						} elseif (isset($graph_data_array['graph_nolegend'])) {
-							$text_format = $legends[$graph_item['local_data_id']][$consolidation_functions[$graph_cf]];
+							$text_format = $legends[$graph_item['local_data_id']][$graph_item['data_source_name']][$consolidation_functions[$graph_cf]];
 						} else {
 							$text_format = '';
 						}
@@ -2534,7 +2534,7 @@ function rrdtool_function_graph($local_graph_id, $rra_id, $graph_data_array, $rr
 						if ($graph_variables['text_format'][$graph_item_id] != '') {
 							$text_format = rrdtool_escape_string(html_escape(str_pad($graph_variables['text_format'][$graph_item_id], $pad_number)));
 						} elseif (isset($graph_data_array['graph_nolegend'])) {
-							$text_format = $legends[$graph_item['local_data_id']][$consolidation_functions[$graph_cf]];
+							$text_format = $legends[$graph_item['local_data_id']][$graph_item['data_source_name']][$consolidation_functions[$graph_cf]];
 						} else {
 							$text_format = '';
 						}
@@ -2594,9 +2594,9 @@ function rrdtool_function_graph($local_graph_id, $rra_id, $graph_data_array, $rr
 				if (preg_match('/^(AREA|AREA:STACK|LINE[123]|STACK)$/', $graph_item_types[$graph_item['graph_type_id']])) {
 					/* give all export items a name */
 					if (trim($graph_variables['text_format'][$graph_item_id]) == '') {
-						$legend_name = $legends[$graph_item['local_data_id']][$consolidation_functions[$graph_cf]];
+						$legend_name = $legends[$graph_item['local_data_id']][$graph_item['data_source_name']][$consolidation_functions[$graph_cf]];
 					} else {
-						$legend_name = $legends[$graph_item['local_data_id']][$consolidation_functions[$graph_cf]];
+						$legend_name = $legends[$graph_item['local_data_id']][$graph_item['data_source_name']][$consolidation_functions[$graph_cf]];
 					}
 
 					if ($legend_name == '') {
