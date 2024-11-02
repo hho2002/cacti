@@ -753,8 +753,8 @@ function api_plugin_install($plugin) {
 	}
 
 	db_execute_prepared('INSERT INTO plugin_config
-		(directory, name, author, webpage, version)
-		VALUES (?, ?, ?, ?, ?)',
+		(directory, name, author, webpage, version, last_updated)
+		VALUES (?, ?, ?, ?, ?, NOW())',
 		array($plugin, $name, $author, $webpage, $version));
 
 	$function = 'plugin_' . $plugin . '_install';
@@ -782,6 +782,35 @@ function api_plugin_install($plugin) {
 	}
 
 	api_plugin_replicate_config();
+}
+
+function api_plugin_upgrade($plugin, $details) {
+	global $config;
+
+	$info = plugin_load_info_file(CACTI_PATH_PLUGINS . '/' . $plugin . '/INFO');
+
+	if ($info) {
+		$id = db_fetch_cell_prepared('SELECT id
+			FROM plugin_config
+			WHERE directory = ?',
+			array($plugin));
+
+		if (isset($info['webpage'])) {
+			$info['homepage'] = $info['webpage'];
+		}
+
+		db_execute_prepared('UPDATE plugin_config
+			SET name = ?, author = ?, webpage = ?, version = ?, last_updated = NOW()
+			WHERE id = ?',
+			array(
+				$info['longname'],
+				$info['author'],
+				$info['homepage'],
+				$info['version'],
+				$id
+			)
+		);
+	}
 }
 
 function api_plugin_uninstall_integrated() {

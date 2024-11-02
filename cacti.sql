@@ -2161,6 +2161,28 @@ CREATE TABLE host_template_snmp_query (
 --
 
 --
+-- Table structure for table `plugin_available`
+--
+
+CREATE TABLE `plugin_available` (
+  `infoname` varchar(20) NOT NULL DEFAULT '',
+  `description` varchar(128) NOT NULL DEFAULT '',
+  `author` varchar(40) NOT NULL DEFAULT '',
+  `webpage` varchar(128) NOT NULL DEFAULT '',
+  `tag_name` varchar(20) NOT NULL DEFAULT '',
+  `published_at` timestamp NULL DEFAULT NULL,
+  `compat` varchar(20) NOT NULL DEFAULT '',
+  `requires` varchar(128) NOT NULL DEFAULT '',
+  `body` blob DEFAULT NULL,
+  `info` blob DEFAULT NULL,
+  `readme` blob DEFAULT NULL,
+  `changelog` blob DEFAULT NULL,
+  `archive` longblob DEFAULT NULL,
+  `last_updated` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`infoname`,`tag_name`)
+) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+
+--
 -- Table structure for table `plugin_config`
 --
 
