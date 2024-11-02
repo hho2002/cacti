@@ -2172,6 +2172,7 @@ CREATE TABLE `plugin_config` (
   `author` varchar(64) NOT NULL default '',
   `webpage` varchar(255) NOT NULL default '',
   `version` varchar(10) NOT NULL default '',
+  `last_updated` timestamp default NULL,
   PRIMARY KEY (`id`),
   KEY `status` (`status`),
   KEY `directory` (`directory`)
