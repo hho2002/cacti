@@ -1454,6 +1454,7 @@ function plugins_make_github_request($url, $type = 'json') {
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_USERAGENT, 'CactiServer ' . CACTI_VERSION);
 
+		$headers  = array();
 		$header[] = 'X-GitHub-Api-Version: 2022-11-28';
 
 		if ($type == 'json') {
@@ -1472,7 +1473,9 @@ function plugins_make_github_request($url, $type = 'json') {
 			$headers[] = "Authorization: Bearer $pat";
 		}
 
-		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+		if (cacti_sizeof($headers)) {
+			curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+		}
 
 		$data = curl_exec($ch);
 
