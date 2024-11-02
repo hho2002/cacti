@@ -1373,7 +1373,7 @@ function plugins_fetch_latest_plugins() {
 
 				$unchanged = db_fetch_cell_prepared('SELECT COUNT(*)
 					FROM plugin_available
-					WHERE name = ?
+					WHERE infoname = ?
 					AND published_at = ?
 					AND tag_name = ?',
 					array($name, $published_at, $tag_name)
