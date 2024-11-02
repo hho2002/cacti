@@ -1357,7 +1357,7 @@ function finalizeAuthProfileData(options, data) {
 }
 
 function makeFiltersResponsive() {
-	storage = Storages.localStorage;
+	storage = Storages.sessionStorage;
 
 	filterNum = 0;
 
@@ -1491,7 +1491,7 @@ function makeFiltersResponsive() {
 }
 
 function toggleFilterAndIcon(id, child, initial) {
-	storage = Storages.localStorage;
+	storage = Storages.sessionStorage;
 
 	if (storage.isSet('filterVisibility')) {
 		state = storage.get('filterVisibility');
@@ -2161,7 +2161,7 @@ function tuneFilter(object, width) {
 }
 
 function handleUserMenu(toggle) {
-	var storage = Storages.localStorage;
+	var storage = Storages.sessionStorage;
 	var windowWidth = $(window).width();
 
 	/* set the navigation id is not set */
@@ -2893,7 +2893,7 @@ function checkFormStatus(href, type, scroll_or_id) {
 }
 
 function setupCollapsible() {
-	var storage = Storages.localStorage;
+	var storage = Storages.sessionStorage;
 
 	$('.collapsible').each(function (data) {
 		var id = $(this).attr('id') + '_cs';

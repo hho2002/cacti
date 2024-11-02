@@ -131,7 +131,7 @@ function themeReady() {
 }
 
 function setMenuVisibility() {
-	storage=Storages.localStorage;
+	storage=Storages.sessionStorage;
 
 	// Initialize the navigation settings
 	// This will setup the initial visibility of the menu
