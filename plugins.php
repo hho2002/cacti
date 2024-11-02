@@ -468,7 +468,7 @@ function update_show_current() {
 		});
 
 		$('#latest').click(function() {
-			strURL = 'plugins.php?action=latest&nostate=true';
+			strURL = 'plugins.php?action=latest';
 			loadUrl({url:strURL});
 		});
 
@@ -997,6 +997,14 @@ function plugin_actions($plugin, $table) {
 function plugins_fetch_latest_plugins() {
 	$start = microtime(true);
 
+	$repo = trim(read_config_option('github_repository'), "/\n\r ");
+	$user = trim(read_config_option('github_user'));
+
+	if ($repo == '' || $user == '') {
+		rase_message('plugins_failed', __('Unable to retrieve Cacti Plugins due to the Base API Repository URL or User not being set in Configuration > Settings > General > GitHub/GitLab API Settings.'), MESSAGE_LEVEL_ERROR);
+		return false;
+	}
+
 	if (!db_table_exists('plugin_available')) {
 		db_execute_prepared('CREATE TABLE plugin_available (
 			name varchar(20) NOT NULL default "0",
@@ -1014,16 +1022,9 @@ function plugins_fetch_latest_plugins() {
 			ROW_FORMAT=Dynamic');
 	}
 
-	$pat = read_config_option('personal_access_token');
-
-	$use_pat = false;
-	if ($pat != '') {
-		$use_pat = true;
-	}
-
 	$avail_plugins = array();
 
-	$plugins = plugins_make_github_request('https://api.github.com/users/cacti/repos', 'json');
+	$plugins = plugins_make_github_request("$repo/users/$user/repos", 'json');
 
 	if (cacti_sizeof($plugins)) {
 		foreach($plugins as $pi) {
@@ -1037,24 +1038,137 @@ function plugins_fetch_latest_plugins() {
 		}
 	}
 
+	$updated = 0;
+
 	if (cacti_sizeof($avail_plugins)) {
 		foreach($avail_plugins as $name => $pi_details) {
-			$details = plugins_make_github_request("https://api.github.com/repos/cacti/plugin_{$name}/releases", 'json');
+			$details = plugins_make_github_request("$repo/repos/$user/plugin_{$name}/releases", 'json');
 
 			if (cacti_sizeof($details)) {
 				$json_data = $details;
 
 				/* insert latest release */
 				if (isset($json_data[0]['tag_name'])) {
-					$avail_plugins[$name]['latest']       = $json_data[0]['tag_name'];
-					$avail_plugins[$name]['body']         = $json_data[0]['body'];
-					$avail_plugins[$name]['published_at'] = $json_data[0]['published_at'];
+					$avail_plugins[$name][$json_data[0]['tag_name']]['body']         = $json_data[0]['body'];
+					$avail_plugins[$name][$json_data[0]['tag_name']]['published_at'] = date('Y-m-d H:i:s', strtotime($json_data[0]['published_at']));
 
+					$published_at = date('Y-m-d H:i:s', strtotime($json_data[0]['published_at']));
+					$tag_name     = $json_data[0]['tag_name'];
+
+					$unchanged = db_fetch_cell_prepared('SELECT COUNT(*)
+						FROM plugin_available
+						WHERE name = ?
+						AND published_at = ?
+						AND tag_name = ?',
+						array($name, $published_at, $tag_name)
+					);
+
+					if ($unchanged) {
+						$skip = true;
+						cacti_log(sprintf('SKIPPED: Plugin:%s, Tag/Release:%s Skipped as it has not changed', $name, $json_data[0]['tag_name']), false, 'PLUGIN');
+					} else {
+						$skip = false;
+					}
+
+					if (!$skip) {
+						$updated++;
+
+						$pstart = microtime(true);
+
+						$files = array(
+							'changelog' => "$repo/repos/$user/plugin_{$name}/contents/CHANGELOG.md?ref={$json_data[0]['tag_name']}",
+							'readme'    => "$repo/repos/$user/plugin_{$name}/contents/README.md?ref={$json_data[0]['tag_name']}",
+							'info'      => "$repo/repos/$user/plugin_{$name}/contents/INFO?ref={$json_data[0]['tag_name']}",
+							'archive'   => "$repo/repos/$user/plugin_{$name}/tarball?ref={$json_data[0]['tag_name']}"
+						);
+
+						$ofiles = array();
+
+						foreach($files as $file => $url) {
+							if ($file != 'archive') {
+								$file_details = plugins_make_github_request($url, 'json');
+
+								if (isset($file_details['content'])) {
+									$ofiles[$file] = base64_decode($file_details['content']);
+								} else {
+									$ofiles[$file] = '';
+								}
+							} else {
+								$file_details = plugins_make_github_request($url, 'file');
+
+								$ofiles[$file] = $file_details;
+							}
+						}
+
+						$compat = '';
+						if ($ofiles['info'] != '') {
+							$lines = explode("\n", $ofiles['info']);
+
+							foreach($lines as $l) {
+								if (strpos($l, 'compat ') !== false) {
+									$compat = trim(explode('=', $l)[1]);
+									break;
+								}
+							}
+						}
+
+						db_execute_prepared('REPLACE INTO plugin_available
+							(name, tag_name, compat, published_at, body, info, readme, changelog, archive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+							array(
+								$name,
+								$json_data[0]['tag_name'],
+								$compat,
+								date('Y-m-d H:i:s', strtotime($json_data[0]['published_at'])),
+								base64_encode($json_data[0]['body']),
+								base64_encode($ofiles['info']),
+								base64_encode($ofiles['readme']),
+								base64_encode($ofiles['changelog']),
+								base64_encode($ofiles['archive'])
+							)
+						);
+
+						$pend = microtime(true);
+
+						cacti_log(sprintf('UPDATED: Plugin:%s, Tag/Release:%s Updated in %0.2f seconds.', $name, $json_data[0]['tag_name'], $pend - $pstart), false, 'PLUGIN');
+					}
+				}
+			}
+
+			$develop = plugins_make_github_request("$repo/repos/$user/plugin_{$name}?rel=develop", 'json');
+
+			if (cacti_sizeof($develop)) {
+				$published_at = date('Y-m-d H:i:s', strtotime($develop['pushed_at']));
+				$tag_name     = 'develop';
+
+				$unchanged = db_fetch_cell_prepared('SELECT COUNT(*)
+					FROM plugin_available
+					WHERE name = ?
+					AND published_at = ?
+					AND tag_name = ?',
+					array($name, $published_at, $tag_name)
+				);
+
+				if ($unchanged) {
+					$skip = true;
+					cacti_log(sprintf('SKIPPED: Plugin:%s, Tag/Release:%s Skipped as it has not changed', $name, 'develop'), false, 'PLUGIN');
+				} else {
+					$skip = false;
+				}
+
+				if (!$skip) {
+					$updated++;
+
+					$pstart = microtime(true);
+
+					$avail_plugins[$name]['develop']['body']         = '';
+					$avail_plugins[$name]['develop']['published_at'] = $published_at;
+
+					/* insert develop */
 					$files = array(
-						'changelog' => "https://api.github.com/repos/cacti/plugin_{$name}/contents/CHANGELOG.md?ref={$json_data[0]['tag_name']}",
-						'readme'    => "https://api.github.com/repos/cacti/plugin_{$name}/contents/README.md?ref={$json_data[0]['tag_name']}",
-						'info'      => "https://api.github.com/repos/cacti/plugin_{$name}/contents/INFO?ref={$json_data[0]['tag_name']}",
-						'archive'   => "https://api.github.com/repos/cacti/plugin_{$name}/tarball?ref={$json_data[0]['tag_name']}"
+						'changelog' => "$repo/repos/$user/plugin_{$name}/contents/CHANGELOG.md?ref=develop",
+						'readme'    => "$repo/repos/$user/plugin_{$name}/contents/README.md?ref=develop",
+						'info'      => "$repo/repos/$user/plugin_{$name}/contents/INFO?ref=develop",
+						'archive'   => "$repo/repos/$user/plugin_{$name}/tarball?ref=develop"
 					);
 
 					$ofiles = array();
@@ -1089,67 +1203,45 @@ function plugins_fetch_latest_plugins() {
 
 					db_execute_prepared('REPLACE INTO plugin_available
 						(name, tag_name, compat, published_at, body, info, readme, changelog, archive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-						array($name, $json_data[0]['tag_name'], $compat, $json_data[0]['published_at'], $json_data[0]['body'], $ofiles['info'], $ofiles['readme'], $ofiles['changelog'], $ofiles['archive']));
+						array(
+							$name,
+							$tag_name,
+							$compat,
+							$published_at,
+							'',
+							base64_encode($ofiles['info']),
+							base64_encode($ofiles['readme']),
+							base64_encode($ofiles['changelog']),
+							base64_encode($ofiles['archive'])
+						)
+					);
+
+					$pend = microtime(true);
+
+					cacti_log(sprintf('UPDATED: Plugin:%s, Tag/Release:%s Updated in %0.2f seconds.', $name, 'develop', $pend - $pstart), false, 'PLUGIN');
 				}
-
-				/* insert develop */
-				$files = array(
-					'changelog' => "https://api.github.com/repos/cacti/plugin_{$name}/contents/CHANGELOG.md?ref=develop",
-					'readme'    => "https://api.github.com/repos/cacti/plugin_{$name}/contents/README.md?ref=develop",
-					'info'      => "https://api.github.com/repos/cacti/plugin_{$name}/contents/INFO?ref=develop",
-					'archive'   => "https://api.github.com/repos/cacti/plugin_{$name}/tarball?ref=develop"
-				);
-
-				$ofiles = array();
-
-				foreach($files as $file => $url) {
-					if ($file != 'archive') {
-						$file_details = plugins_make_github_request($url, 'json');
-
-						if (isset($file_details['content'])) {
-							$ofiles[$file] = base64_decode($file_details['content']);
-						} else {
-							$ofiles[$file] = '';
-						}
-					} else {
-						$file_details = plugins_make_github_request($url, 'file');
-
-						$ofiles[$file] = $file_details;
-					}
-				}
-
-				$compat = '';
-				if ($ofiles['info'] != '') {
-					$lines = explode("\n", $ofiles['info']);
-
-					foreach($lines as $l) {
-						if (strpos($l, 'compat ') !== false) {
-							$compat = trim(explode('=', $l)[1]);
-							break;
-						}
-					}
-				}
-
-				db_execute_prepared('REPLACE INTO plugin_available
-					(name, tag_name, compat, published_at, body, info, readme, changelog, archive) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-					array($name, 'develop', $compat, NULL, '', $ofiles['info'], $ofiles['readme'], $ofiles['changelog'], $ofiles['archive']));
 			}
 		}
 	}
 
 	$end = microtime(true);
 
+	$total_plugins   = cacti_sizeof($avail_plugins);
+	$updated_plugins = $updated;
+
 	if (cacti_sizeof($avail_plugins)) {
-		raise_message('plugins_fetched', __('There were %s plugins found at The Cacti Groups github site retrieved in %0.2f seconds.', cacti_sizeof($avail_plugins), $end - $start), MESSAGE_LEVEL_INFO);
+		raise_message('plugins_fetched', __('There were %s Plugins found at The Cacti Groups GitHub site and %s Plugins Tags/Releases were retreived and updated in %0.2f seconds.', $total_plugins, $updated_plugins, $end - $start), MESSAGE_LEVEL_INFO);
 	} else {
-		raise_message('plugins_fetched', __('Unable to reach The Cacti Groups github site.  No plugin data retrieved in %0.2f seconds.', $end-$start), MESSAGE_LEVEL_WARN);
+		raise_message('plugins_fetched', __('Unable to reach The Cacti Groups GitHub site.  No plugin data retrieved in %0.2f seconds.', $end-$start), MESSAGE_LEVEL_WARN);
 	}
+
+	cacti_log(sprintf('PLUGIN STATS: Time:%0.2f Plugins:%d Updated:%d', $end-$start, cacti_sizeof($avail_plugins), $updated_plugins), false, 'SYSTEM');
 
 	return $avail_plugins;
 }
 
 function plugins_make_github_request($url, $type = 'json') {
-	$pat = read_config_option('personal_access_token');
+	$pat  = read_config_option('github_access_token');
 
 	$use_pat = false;
 	if ($pat != '') {

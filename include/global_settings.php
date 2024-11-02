@@ -562,8 +562,29 @@ $settings['general'] = array(
 		'method'        => 'checkbox',
 		'default'       => 'on',
 	),
-	'personal_access_token' => array(
-		'friendly_name' => __('GitHub Personal Access Token'),
+	'github_spacer' => array(
+		'friendly_name' => __('GitHub/GitLab API Settings'),
+		'method'        => 'spacer',
+		'collapsible'   => 'true'
+	),
+	'github_repository' => array(
+		'friendly_name' => __('Base API Repository URL'),
+		'description'   => __('If you wish to get the latest plguins versions directly from GitHub or GitLab enter the GitHub or GitLab API url here.  The default is https://api.github.com/.  Change this only if you have your own repository that you maintain for Cacti Plugins.'),
+		'method'        => 'textbox',
+		'default'       => 'https://api.github.com/',
+		'size'          => '60',
+		'max_length'    => '100',
+	),
+	'github_user' => array(
+		'friendly_name' => __('GitHub User Account'),
+		'description'   => __('The User account that holds your GitHub/GitLab repositories.  Change this only if you have your own repository that you maintain for Cacti Plugins.'),
+		'method'        => 'textbox',
+		'default'       => 'cacti',
+		'size'          => '20',
+		'max_length'    => '20',
+	),
+	'github_access_token' => array(
+		'friendly_name' => __('Personal Access Token'),
 		'description'   => __('If you wish to get the latest plguins versions directly from GitHub without overly restricted rate limiting, enter your Personal Access Token here.'),
 		'method'        => 'textbox_password',
 		'default'       => '',
