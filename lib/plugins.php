@@ -790,26 +790,33 @@ function api_plugin_upgrade_register($plugin) {
 	$info = plugin_load_info_file(CACTI_PATH_PLUGINS . '/' . $plugin . '/INFO');
 
 	if ($info) {
-		$id = db_fetch_cell_prepared('SELECT id
+		$details = db_fetch_row_prepared('SELECT *
 			FROM plugin_config
 			WHERE directory = ?',
 			array($plugin));
 
-		if (isset($info['webpage'])) {
-			$info['homepage'] = $info['webpage'];
-		}
+		if (cacti_sizeof($details)) {
+			$id      = $details['id'];
+			$version = $details['version'];
 
-		db_execute_prepared('UPDATE plugin_config
-			SET name = ?, author = ?, webpage = ?, version = ?, last_updated = NOW()
-			WHERE id = ?',
-			array(
-				$info['longname'],
-				$info['author'],
-				$info['homepage'],
-				$info['version'],
-				$id
-			)
-		);
+			if (isset($info['webpage'])) {
+				$info['homepage'] = $info['webpage'];
+			}
+
+			if ($version != $info['version']) {
+				db_execute_prepared('UPDATE plugin_config
+					SET name = ?, author = ?, webpage = ?, version = ?, last_updated = NOW()
+					WHERE id = ?',
+					array(
+						$info['longname'],
+						$info['author'],
+						$info['homepage'],
+						$info['version'],
+						$id
+					)
+				);
+			}
+		}
 	}
 }
 
