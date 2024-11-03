@@ -784,7 +784,7 @@ function api_plugin_install($plugin) {
 	api_plugin_replicate_config();
 }
 
-function api_plugin_upgrade($plugin, $details) {
+function api_plugin_upgrade_register($plugin) {
 	global $config;
 
 	$info = plugin_load_info_file(CACTI_PATH_PLUGINS . '/' . $plugin . '/INFO');
