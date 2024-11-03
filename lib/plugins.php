@@ -996,7 +996,7 @@ function api_plugin_disable_all($plugin) {
 	api_plugin_disable_hooks_all($plugin);
 
 	db_execute_prepared('UPDATE plugin_config
-		SET status = 4
+		SET status = 7
 		WHERE directory = ?',
 		array($plugin));
 
@@ -1346,7 +1346,12 @@ function plugin_is_compatible($plugin) {
 
 function plugin_load_info_defaults($file, $info, $defaults = array()) {
 	$result = $info;
-	$dir    = @basename(@dirname($file));
+
+	if ($file != '') {
+		$dir = basename(dirname($file));
+	} else {
+		$dir = 'unknown';
+	}
 
 	if (!is_array($defaults)) {
 		$defaults = array();
@@ -1376,12 +1381,14 @@ function plugin_load_info_defaults($file, $info, $defaults = array()) {
 		}
 	}
 
-	if (strstr($dir, ' ') !== false) {
-		$result['status'] = -3;
-	} elseif (strtolower($dir) != strtolower($result['name'])) {
-		$result['status'] = -2;
-	} elseif (!isset($result['compat']) || cacti_version_compare(CACTI_VERSION, $result['compat'], '<')) {
-		$result['status'] = -1;
+	if ($info_fields['status'] == 0) {
+		if (strstr($dir, ' ') !== false) {
+			$result['status'] = -3;
+		} elseif (strtolower($dir) != strtolower($result['name'])) {
+			$result['status'] = -2;
+		} elseif (!isset($result['compat']) || cacti_version_compare(CACTI_VERSION, $result['compat'], '<')) {
+			$result['status'] = -1;
+		}
 	}
 
 	return $result;
