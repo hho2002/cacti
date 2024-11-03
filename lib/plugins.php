@@ -784,6 +784,15 @@ function api_plugin_install($plugin) {
 	api_plugin_replicate_config();
 }
 
+/**
+ * api_plugin_upgrade_register - Check the current version vs. the info version
+ * and if it finds that they are different, it will update the version
+ * and return true or false depending on if the version was changed.
+ *
+ * @param   string  The name of the plugin
+ *
+ * @return  bool    True if the version changed else false
+ */
 function api_plugin_upgrade_register($plugin) {
 	global $config;
 
@@ -815,9 +824,13 @@ function api_plugin_upgrade_register($plugin) {
 						$id
 					)
 				);
+
+				return true;
 			}
 		}
 	}
+
+	return false;
 }
 
 function api_plugin_uninstall_integrated() {
