@@ -54,7 +54,9 @@ $actions = array(
 	'downgrade'      => __('Downgrade'),
 
 	/* manage downloaded content */
-	'loadplugin'     => __('Install from Downloaded Plugins'),
+	'load'           => __('Install from Downloaded Plugins'),
+	'readme'         => __('View the Plugins Readme File'),
+	'changelog'      => __('View the Plugins ChangeLog File'),
 	'latest'         => __('Fetch Latest Plugin Archives'),
 
 	/* remote poller plugin functions */
@@ -122,7 +124,7 @@ $pluginslist = retrieve_plugin_list();
 
 set_default_action('list');
 
-$action = get_request_var('action');
+$action = get_nfilter_request_var('action');
 
 /* pre-check for actions that will fail by default */
 if (isset_request_var('plugin')) {
@@ -130,7 +132,7 @@ if (isset_request_var('plugin')) {
 
 	$plugin = sanitize_search_string(get_request_var('plugin'));
 
-	if (!in_array($plugin, $pluginslist, true)) {
+	if (!in_array($plugin, $pluginslist, true) && ($action != 'changelog' && $action != 'readme' && $action != 'load')) {
 		raise_message('invalid_plugin', __('The action \'%s\' on Plugin \'%s\' can not be performed due to the Plugin not being installed', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
 		header('Location: plugins.php');
 		exit;
@@ -143,7 +145,7 @@ if (isset_request_var('plugin')) {
 	$plugin = '';
 }
 
-switch(get_request_var('action')) {
+switch($action) {
 	case 'list':
 	case 'avail':
 		top_header();
@@ -151,6 +153,18 @@ switch(get_request_var('action')) {
 		update_show_current();
 
 		bottom_footer();
+
+		break;
+	case 'readme':
+		$tag = get_nfilter_request_var('tag');
+
+		api_plugin_get_available_file_contents($plugin, $tag, 'readme');
+
+		break;
+	case 'changelog':
+		$tag = get_nfilter_request_var('tag');
+
+		api_plugin_get_available_file_contents($plugin, $tag, 'changelog');
 
 		break;
 	case 'latest':
@@ -263,6 +277,30 @@ switch(get_request_var('action')) {
 }
 
 exit;
+
+function api_plugin_get_available_file_contents($plugin, $tag, $filetype) {
+	include_once(CACTI_PATH_INCLUDE . '/vendor/parsedown/Parsedown.php');
+
+	if (db_column_exists('plugin_available', $filetype)) {
+		$contents = db_fetch_cell_prepared("SELECT $filetype AS data
+			FROM plugin_available
+			WHERE plugin = ?
+			AND tag_name = ?",
+			array($plugin, $tag));
+
+		if ($contents != '') {
+			$contents = base64_decode($contents);
+
+			$Parsedown = new Parsedown();
+
+			print $Parsedown->text($contents);
+		} else {
+			return false;
+		}
+	} else {
+		return false;
+	}
+}
 
 function api_plugin_archive_remove($plugin, $id) {
 	db_execute_prepared('DELETE FROM plugin_archive
@@ -1197,8 +1235,12 @@ function update_show_current() {
 	var url = '';
 
 	$(function() {
-		$('.pirestore').click(function(event) {
+		$('.pirestore').off('click').on('click', function(event) {
 			event.preventDefault();
+
+			if ($('#pidialog').dialog('instance')) {
+				$('#pidialog').dialog('close');
+			}
 
 			url = $(this).attr('href');
 
@@ -1220,21 +1262,32 @@ function update_show_current() {
 				}
 			};
 
-			$('body').remove('#pidialog').append("<div id='pidialog'><h4><?php print $resarchive_msg;?></h4></div>");
+			var message = "<div id='pidialog'><div><?php print $resarchive_msg;?></div></div>";
+
+			if ($('#pidialog').length == 0) {
+				$('#main').append(message);
+			} else {
+				$('#pidialog').remove().append(message);
+			}
 
 			$('#pidialog').dialog({
 				title: '<?php print $resarchive_title;?>',
 				minHeight: 80,
-				minWidth: 500,
+				minWidth: 800,
 				buttons: btnResArchive,
 				open: function() {
 					$('.ui-dialog-buttonpane > button:last').focus();
+					$('#pidialog').offset().top;
 				}
 			});
 		});
 
-		$('.pirmarchive').click(function(event) {
+		$('.pirmarchive').off('click').on('click', function(event) {
 			event.preventDefault();
+
+			if ($('#pidialog').dialog('instance')) {
+				$('#pidialog').dialog('close');
+			}
 
 			url = $(this).attr('href');
 
@@ -1256,21 +1309,32 @@ function update_show_current() {
 				}
 			};
 
-			$('body').remove('#pidialog').append("<div id='pidialog'><h4><?php print $rmarchive_msg;?></h4></div>");
+			var message = "<div id='pidialog'><div><?php print $rmarchive_msg;?></div></div>";
+
+			if ($('#pidialog').length == 0) {
+				$('#main').append(message);
+			} else {
+				$('#pidialog').remove().append(message);
+			}
 
 			$('#pidialog').dialog({
 				title: '<?php print $rmarchive_title;?>',
 				minHeight: 80,
-				minWidth: 500,
+				minWidth: 800,
 				buttons: btnRmArchive,
 				open: function() {
 					$('.ui-dialog-buttonpane > button:last').focus();
+					$('#pidialog').offset().top;
 				}
 			});
 		});
 
-		$('.pirmdata').click(function(event) {
+		$('.pirmdata').off('click').on('click', function(event) {
 			event.preventDefault();
+
+			if ($('#pidialog').dialog('instance')) {
+				$('#pidialog').dialog('close');
+			}
 
 			url = $(this).attr('href');
 
@@ -1292,21 +1356,33 @@ function update_show_current() {
 				}
 			};
 
-			$('body').remove('#pidialog').append("<div id='pidialog'><h4><?php print $rmdata_msg;?></h4></div>");
+			var message = "<div id='pidialog'><div><?php print $rmdata_msg;?></div></div>";
+
+			if ($('#pidialog').length == 0) {
+				$('#main').append(message);
+			} else {
+				$('#pidialog').remove().append(message);
+			}
 
 			$('#pidialog').dialog({
 				title: '<?php print $rmdata_title;?>',
 				minHeight: 80,
-				minWidth: 500,
+				minWidth: 800,
 				buttons: btnRmData,
 				open: function() {
 					$('.ui-dialog-buttonpane > button:last').focus();
+					$('#pidialog').offset().top;
 				}
 			});
 		});
 
-		$('.piuninstall').click(function(event) {
+		$('.piuninstall').off('click').on('click', function(event) {
 			event.preventDefault();
+
+			if ($('#pidialog').dialog('instance')) {
+				$('#pidialog').dialog('close');
+			}
+
 			url = $(this).attr('href');
 
 			var btnUninstall = {
@@ -1327,15 +1403,88 @@ function update_show_current() {
 				}
 			};
 
-			$('body').remove('#pidialog').append("<div id='pidialog'><h4><?php print $uninstall_msg;?></h4></div>");
+			var message = "<div id='pidialog'><div><?php print $uninstall_msg;?></div></div>";
+
+			if ($('#pidialog').length == 0) {
+				$('#main').append(message);
+			} else {
+				$('#pidialog').remove().append(message);
+			}
 
 			$('#pidialog').dialog({
 				title: '<?php print $uninstall_title;?>',
 				minHeight: 80,
-				minWidth: 500,
+				minWidth: 800,
 				buttons: btnUninstall,
 				open: function() {
 					$('.ui-dialog-buttonpane > button:last').focus();
+					$('#pidialog').offset().top;
+				}
+			});
+		});
+
+		$('.pireadme').off('click').on('click', function(event) {
+			event.preventDefault();
+
+			if ($('#pidialog').dialog('instance')) {
+				$('#pidialog').dialog('close');
+			}
+
+			var url = $(this).attr('href');
+
+			$.get(url, function(data) {
+				if (data != '') {
+					var message = "<div id='pidialog'><div>"+DOMPurify.sanitize(data)+'</div></div>';
+
+					if ($('#pidialog').length == 0) {
+						$('#main').append(message);
+					} else {
+						$('#pidialog').remove().append(message);
+					}
+
+					$('#pidialog').dialog({
+						title: '<?php print __esc('Plugin Readme File');?>',
+						minHeight: 80,
+						maxHeight: 600,
+						minWidth: 900,
+						open: function() {
+							$('.ui-dialog-buttonpane > button:last').focus();
+							$('#pidialog').offset().top;
+						}
+					});
+				}
+			});
+		});
+
+		$('.pichangelog').off('click').on('click', function(event) {
+			event.preventDefault();
+
+			if ($('#pidialog').dialog('instance')) {
+				$('#pidialog').dialog('close');
+			}
+
+			var url = $(this).attr('href');
+
+			$.get(url, function(data) {
+				if (data != '') {
+					var message = "<div id='pidialog'><div>"+DOMPurify.sanitize(data)+'</div></div>';
+
+					if ($('#pidialog').length == 0) {
+						$('#main').append(message);
+					} else {
+						$('#pidialog').remove().append(message);
+					}
+
+					$('#pidialog').dialog({
+						title: '<?php print __esc('Plugin ChangeLog File');?>',
+						minHeight: 80,
+						maxHeight: 600,
+						minWidth: 900,
+						open: function() {
+							$('.ui-dialog-buttonpane > button:last').focus();
+							$('#pidialog').offset().top;
+						}
+					});
 				}
 			});
 		});
@@ -1456,7 +1605,7 @@ function format_available_plugin_row($plugin, $last_plugin, $include_ordering, $
 
 	/* no link to the changelog unless it exists */
 	if ($plugin['changelog'] > 0) {
-		$row .= "<a class='pichangelog' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=changelog&plugin=' . $plugin['plugin'] . '&id=' . $plugin['avail_tag_name']) . "' title='" . __esc('View the Plugins ChangeLog') . "' class='linkEditMain'><i class='fas fa-file deviceRecovering'></i></a>";
+		$row .= "<a class='pichangelog' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=changelog&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('View the Plugins ChangeLog') . "' class='linkEditMain'><i class='fas fa-file deviceRecovering'></i></a>";
 	}
 
 	$row .= '</td>';
