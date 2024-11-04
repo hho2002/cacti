@@ -1444,9 +1444,8 @@ function update_show_current() {
 
 					$('#pidialog').dialog({
 						title: '<?php print __esc('Plugin Readme File');?>',
-						minHeight: 80,
-						maxHeight: 600,
-						minWidth: 900,
+						maxHeight: 400,
+						minWidth: 800,
 						open: function() {
 							$('.ui-dialog-buttonpane > button:last').focus();
 							$('#pidialog').offset().top;
@@ -1477,9 +1476,8 @@ function update_show_current() {
 
 					$('#pidialog').dialog({
 						title: '<?php print __esc('Plugin ChangeLog File');?>',
-						minHeight: 80,
-						maxHeight: 600,
-						minWidth: 900,
+						maxHeight: 400,
+						minWidth: 800,
 						open: function() {
 							$('.ui-dialog-buttonpane > button:last').focus();
 							$('#pidialog').offset().top;
