@@ -3254,6 +3254,15 @@ $(function () {
 	 */
 	$('input, select, textarea, a').unbind();
 
+	/**
+ 	 * Destroy all tooltips on a page after refresh
+ 	 */
+	$('.ui-tooltip').each(function() {
+		if ($(this).tooltip('instance')) {
+			$(this).tooltip('destroy');
+		}
+	});
+
 	// Use traditional popstate handler
 	window.onpopstate = function (event) {
 		handlePopState(event);
