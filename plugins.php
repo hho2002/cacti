@@ -310,7 +310,7 @@ function api_plugin_archive($plugin) {
 
 		if (file_exists($tmpafile)) {
 			db_execute_prepared('INSERT INTO plugin_archive
-				(plugin, description, author, webpage, version, requires, compat, user_id, dir_md5sum, archive_date, archive)
+				(plugin, description, author, webpage, version, requires, compat, user_id, dir_md5sum, last_updated, archive)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
 				array(
 					$plugin,
