@@ -903,7 +903,7 @@ function update_show_current() {
 		$sql_order = str_replace('`pi`.`plugin` ', '`pa`.`plugin` ', $sql_order);
 		$sql_order = str_replace('pi.plugin ', 'pa.plugin ', $sql_order);
 		$sql_order = str_replace('`pi`.last_updated ', '`pa`.`last_updated` ', $sql_order);
-	} elseif (get_request_var('state') != 6) {
+	} elseif (get_request_var('state') != 6 && get_request_var('state') != 0) {
 		$sql_order = str_replace('`pa`.`plugin` ', '`pi`.`plugin` ', $sql_order);
 		$sql_order = str_replace('pa.plugin ', 'pi.plugin ', $sql_order);
 		$sql_order = str_replace('`pa`.last_updated ', '`pi`.`last_updated` ', $sql_order);
@@ -1010,7 +1010,7 @@ function update_show_current() {
 				),
 				'requires' => array(
 					'display' => __('Archived Requires'),
-					'align'   => 'left',
+					'align'   => 'right',
 					'sort'    => 'ASC',
 					'tip'     => __('This Plugin requires the following Plugins be installed first.')
 				),
