@@ -1126,7 +1126,7 @@ function update_show_current() {
 					text: '<?php print __('Delete Archive');?>',
 					id: 'btnDelArchive',
 					click: function() {
-						$('#pidialog').dialog('close');
+						$(this).dialog('close');
 						document.location = url;
 					}
 				}
@@ -1162,7 +1162,7 @@ function update_show_current() {
 					text: '<?php print __('Remove Data');?>',
 					id: 'btnUninstall',
 					click: function() {
-						$('#pidialog').dialog('close');
+						$(this).dialog('close');
 						document.location = url;
 					}
 				}
@@ -1197,7 +1197,7 @@ function update_show_current() {
 					text: '<?php print __('Uninstall');?>',
 					id: 'btnUninstall',
 					click: function() {
-						$('#pidialog').dialog('close');
+						$(this).dialog('close');
 						document.location = url;
 					}
 				}
