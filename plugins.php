@@ -1774,7 +1774,7 @@ function plugin_actions($plugin, $table) {
 
 	switch ($plugin['status']) {
 		case '0': // Not Installed
-			$path        = CACTI_PATH_PLUGINS . '/' . $plugin['plugin'];
+			$path = CACTI_PATH_PLUGINS . '/' . $plugin['plugin'];
 
 			if (!file_exists("$path/setup.php")) {
 				$link .= "<a class='pierror' href='#' title='" . __esc('Plugin directory \'%s\' is missing setup.php', $plugin['plugin']) . "' class='linkEditMain'><i class='fa fa-cog deviceUnknown'></i></a>";
@@ -1938,6 +1938,11 @@ function plugins_fetch_latest_plugins() {
 
 	$plugins = plugins_make_github_request("$repo/users/$user/repos", 'json');
 
+	if ($plugins === false) {
+		header('Location: plugins.php');
+		exit;
+	}
+
 	if (cacti_sizeof($plugins)) {
 		foreach($plugins as $pi) {
 			if (isset($pi['full_name'])) {
@@ -1955,6 +1960,11 @@ function plugins_fetch_latest_plugins() {
 	if (cacti_sizeof($avail_plugins)) {
 		foreach($avail_plugins as $plugin_name => $pi_details) {
 			$details = plugins_make_github_request("$repo/repos/$user/plugin_{$plugin_name}/releases", 'json');
+
+			if ($details === false) {
+				header('Location: plugins.php');
+				exit;
+			}
 
 			if (cacti_sizeof($details)) {
 				$json_data = $details;
@@ -2000,6 +2010,11 @@ function plugins_fetch_latest_plugins() {
 							if ($file != 'archive') {
 								$file_details = plugins_make_github_request($url, 'json');
 
+								if ($file_details === false) {
+									header('Location: plugins.php');
+									exit;
+								}
+
 								if (isset($file_details['content'])) {
 									$ofiles[$file] = base64_decode($file_details['content']);
 								} else {
@@ -2007,6 +2022,11 @@ function plugins_fetch_latest_plugins() {
 								}
 							} else {
 								$file_details = plugins_make_github_request($url, 'file');
+
+								if ($file_details === false) {
+									header('Location: plugins.php');
+									exit;
+								}
 
 								$ofiles[$file] = $file_details;
 							}
@@ -2064,6 +2084,11 @@ function plugins_fetch_latest_plugins() {
 
 			$develop = plugins_make_github_request("$repo/repos/$user/plugin_{$plugin_name}?rel=develop", 'json');
 
+			if ($develop === false) {
+				header('Location: plugins.php');
+				exit;
+			}
+
 			if (cacti_sizeof($develop)) {
 				$published_at = date('Y-m-d H:i:s', strtotime($develop['pushed_at']));
 				$tag_name     = 'develop';
@@ -2105,6 +2130,11 @@ function plugins_fetch_latest_plugins() {
 						if ($file != 'archive') {
 							$file_details = plugins_make_github_request($url, 'json');
 
+							if ($file_details === false) {
+								header('Location: plugins.php');
+								exit;
+							}
+
 							if (isset($file_details['content'])) {
 								$ofiles[$file] = base64_decode($file_details['content']);
 							} else {
@@ -2112,6 +2142,11 @@ function plugins_fetch_latest_plugins() {
 							}
 						} else {
 							$file_details = plugins_make_github_request($url, 'file');
+
+							if ($file_details === false) {
+								header('Location: plugins.php');
+								exit;
+							}
 
 							$ofiles[$file] = $file_details;
 						}
@@ -2222,15 +2257,23 @@ function plugins_make_github_request($url, $type = 'json') {
 			curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 		}
 
-		$data = curl_exec($ch);
-
-		$error = curl_errno($ch);
+		$data  = curl_exec($ch);
+		$info  = curl_getinfo($ch);
+		$errno = curl_errno($ch);
+		$error = curl_error($ch);
 
 		curl_close($ch);
 
-		if ($error == 0) {
+		if ($info['http_code'] == 403 || $info['http_code'] == 429) {
+			$json_data = json_decode($data, true);
+			raise_message('rate_limited', $json_data['message'], MESSAGE_LEVEL_ERROR);
+
+			return false;
+		}
+
+		if ($errno == 0) {
 			if ($type == 'json') {
-				return json_decode($data, true);;
+				return json_decode($data, true);
 			} elseif ($type == 'raw') {
 				return $data;
 			} elseif ($type == 'file') {
@@ -2243,7 +2286,8 @@ function plugins_make_github_request($url, $type = 'json') {
 				return $data;
 			}
 		} else {
-			cacti_log("Curl Experienced an error with url:$url");
+			raise_message('curl_error', "Curl Experienced an error with url:$url, error:$error", MESSAGE_LEVEL_ERROR);
+
 			return false;
 		}
 	}
