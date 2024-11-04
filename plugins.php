@@ -1262,7 +1262,7 @@ function update_show_current() {
 				}
 			};
 
-			var message = "<div id='pidialog'><div><?php print $resarchive_msg;?></div></div>";
+			var message = "<div id='pidialog' style='display:none;'><div><?php print $resarchive_msg;?></div></div>";
 
 			if ($('#pidialog').length == 0) {
 				$('#main').append(message);
@@ -1309,7 +1309,7 @@ function update_show_current() {
 				}
 			};
 
-			var message = "<div id='pidialog'><div><?php print $rmarchive_msg;?></div></div>";
+			var message = "<div id='pidialog' style='display:none;'><div><?php print $rmarchive_msg;?></div></div>";
 
 			if ($('#pidialog').length == 0) {
 				$('#main').append(message);
@@ -1356,7 +1356,7 @@ function update_show_current() {
 				}
 			};
 
-			var message = "<div id='pidialog'><div><?php print $rmdata_msg;?></div></div>";
+			var message = "<div id='pidialog' style='display:none;'><div><?php print $rmdata_msg;?></div></div>";
 
 			if ($('#pidialog').length == 0) {
 				$('#main').append(message);
@@ -1403,7 +1403,7 @@ function update_show_current() {
 				}
 			};
 
-			var message = "<div id='pidialog'><div><?php print $uninstall_msg;?></div></div>";
+			var message = "<div id='pidialog' style='display:none;'><div><?php print $uninstall_msg;?></div></div>";
 
 			if ($('#pidialog').length == 0) {
 				$('#main').append(message);
@@ -1434,7 +1434,7 @@ function update_show_current() {
 
 			$.get(url, function(data) {
 				if (data != '') {
-					var message = "<div id='pidialog'><div>"+DOMPurify.sanitize(data)+'</div></div>';
+					var message = "<div id='pidialog' style='display:none;'><div>"+DOMPurify.sanitize(data)+'</div></div>';
 
 					if ($('#pidialog').length == 0) {
 						$('#main').append(message);
@@ -1466,7 +1466,7 @@ function update_show_current() {
 
 			$.get(url, function(data) {
 				if (data != '') {
-					var message = "<div id='pidialog'><div>"+DOMPurify.sanitize(data)+'</div></div>';
+					var message = "<div id='pidialog' style='display:none;'><div>"+DOMPurify.sanitize(data)+'</div></div>';
 
 					if ($('#pidialog').length == 0) {
 						$('#main').append(message);
