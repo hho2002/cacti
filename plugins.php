@@ -131,11 +131,11 @@ if (isset_request_var('plugin')) {
 	$plugin = sanitize_search_string(get_request_var('plugin'));
 
 	if (!in_array($plugin, $pluginslist, true)) {
-		raise_message('invalid_plugin', __('The action %s on Plugin %s can not be performed due to the Plugin not being installed', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
+		raise_message('invalid_plugin', __('The action \'%s\' on Plugin \'%s\' can not be performed due to the Plugin not being installed', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
 		header('Location: plugins.php');
 		exit;
 	} elseif (in_array($plugin, $plugins_integrated, true)) {
-		raise_message('invalid_plugin_action', __('The action %s %s on Plugin %s can not be taken as the Plugin is integrated.', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
+		raise_message('invalid_plugin_action', __('The action \'%s\' \'%s\' on Plugin \'%s\' can not be taken as the Plugin is integrated.', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
 		header('Location: plugins.php');
 		exit;
 	}
@@ -239,7 +239,9 @@ switch(get_request_var('action')) {
 
 		break;
 	case 'restore':
-		api_plugin_archive_restore($plugin);
+		$id = get_filter_request_var('id');
+
+		api_plugin_archive_restore($plugin, $id);
 
 		header('Location: plugins.php');
 
@@ -267,7 +269,89 @@ function api_plugin_archive_remove($plugin, $id) {
 		WHERE plugin = ? AND id = ?',
 		array($plugin, $id));
 
-	raise_message('plugin_archive_removed', __('The Archive for Plugin %s has been removed.', $plugin), MESSAGE_LEVEL_INFO);
+	raise_message('plugin_archive_removed', __('The Archive for Plugin \'%s\' has been removed.', $plugin), MESSAGE_LEVEL_INFO);
+}
+
+function api_plugin_archive_restore($plugin, $id) {
+	$archive = db_fetch_cell_prepared('SELECT archive
+		FROM plugin_archive
+		WHERE plugin = ?
+		AND id = ?',
+		array($plugin, $id));
+
+	if ($archive != '') {
+		$tmpfile  = sys_get_temp_dir() . '/' . $plugin . '_' . rand() . '.tar.gz';
+
+		$file_data = base64_decode($archive);
+
+		if ($file_data != '') {
+			/* set the restore path to the plugin directory */
+			$restore_path = CACTI_PATH_BASE . "/plugins/$plugin";
+
+			/* write the archive to the temporary directory */
+			file_put_contents($tmpfile, $file_data);
+
+			/* open the archive */
+			$archive = new PharData($tmpfile);
+
+			/* create directory if required */
+			if (!is_dir($restore_path)) {
+				if (!mkdir($restore_path, 0755, true)) {
+					raise_message('archive_failed', __('Restore failed!  The Plugin \'%s\' archive Restore Failed.  Unable to create directory \'%s\'.', $plugin, $restore_path), MESSAGE_LEVEL_ERROR);
+					return false;
+				}
+			}
+
+			/* get the list of files in the archive */
+			$archive_files = array();
+			foreach (new RecursiveIteratorIterator($archive) as $file) {
+				$file = str_replace("phar://{$tmpfile}", '', $file->getPathname());
+				$archive_files[$file] = $file;
+			}
+
+			/* get the list of files in the plugin direcotory */
+			$dir_iterator = new RecursiveDirectoryIterator($restore_path);
+			$iterator     = new RecursiveIteratorIterator($dir_iterator, RecursiveIteratorIterator::SELF_FIRST);
+
+			$current_files = array();
+			foreach ($iterator as $file) {
+				$file = str_replace($restore_path, '', $file);
+
+				if (substr($file, -1) == '.') {
+					continue;
+				}
+
+				$current_files[$file] = $file;
+			}
+
+			/* remove files that are not in the archive */
+			foreach ($current_files as $file) {
+				if (!is_dir("$restore_path/$file") && !isset($archive_files[$file])) {
+					// Let's not do that until we figure out weathermap.
+					// unlink("$restore_path/$file");
+				}
+			}
+
+			/* extract the file to the archive */
+			$archive->extractTo($restore_path, null, true);
+			$archive->__destruct();
+
+			/* remove the archive file */
+			unlink($tmpfile);
+
+			raise_message('archive_restored', __('Restore succeeded!  The Plugin \'%s\' archive Restore succeeded.', $plugin), MESSAGE_LEVEL_INFO);
+
+			return true;
+		} else {
+			raise_message('archive_failed', __('Restore failed!  The Plugin \'%s\' archive Restore Failed.  Check the cacti.log for warnings.', $plugin), MESSAGE_LEVEL_ERROR);
+
+			return false;
+		}
+	} else {
+		raise_message('plugin_archive_not_found', __('Restore failed!  Unable to locate the Archive for Plugin \'%s\' in the database.', $plugin), MESSAGE_LEVEL_ERROR);
+
+		return false;
+	}
 }
 
 function api_plugin_archive($plugin) {
@@ -288,6 +372,7 @@ function api_plugin_archive($plugin) {
 
 		/* create the tar.gz file */
 		$archive->compress(Phar::GZ);
+		$archive->__destruct();
 
 		/* delete the tar file */
 		unlink($tmpfile);
@@ -329,12 +414,12 @@ function api_plugin_archive($plugin) {
 
 			unlink($tmpafile);
 
-			raise_message('plugin_archived', __('The Plugin %s has been archived successfully.', $plugin), MESSAGE_LEVEL_INFO);
+			raise_message('plugin_archived', __('The Plugin \'%s\' has been archived successfully.', $plugin), MESSAGE_LEVEL_INFO);
 		} else {
-			raise_message('plugin_archive_failed', __('The Plugin %s archiving process has failed.  Check the Cacti log for errors.', $plugin), MESSAGE_LEVEL_ERROR);
+			raise_message('plugin_archive_failed', __('The Plugin \'%s\' archiving process has failed.  Check the Cacti log for errors.', $plugin), MESSAGE_LEVEL_ERROR);
 		}
 	} else {
-		raise_message('plugin_archive_failed', __('The Plugin %s archiving process has failed due to the plugin directory being missing.', $plugin), MESSAGE_LEVEL_ERROR);
+		raise_message('plugin_archive_failed', __('The Plugin \'%s\' archiving process has failed due to the plugin directory being missing.', $plugin), MESSAGE_LEVEL_ERROR);
 	}
 }
 
@@ -807,7 +892,7 @@ function update_show_current() {
 				pa.plugin, pa.description AS avail_description,
 				pa.author AS avail_author, pa.webpage AS avail_webpage,
 				pa.compat AS avail_compat, pa.published_at AS avail_published, pa.tag_name AS avail_tag_name,
-				pa.requires AS avail_requires
+				pa.requires AS avail_requires, length(pa.changelog) AS changelog
 				FROM plugin_available AS pa
 				LEFT JOIN $table AS pi
 				ON pa.plugin = pi.plugin
@@ -1101,6 +1186,9 @@ function update_show_current() {
 	$rmdata_msg   = __('Removing Plugin Data and Settings for will remove all Plugin Data and Settings.  If you really want to Remove Data and Settings for this Plugin, click \'Remove Data\' below.  Otherwise click \'Cancel\'.');
 	$rmdata_title = __('Are you sure you want to Remove all Plugin Data and Settings?');
 
+	$resarchive_msg   = __('Restoring this Plugin Archive will overwrite the current Plugin directory.  If you really want to Restore this Plugin Archive, click \'Restore\' below.  Otherwise click \'Cancel\'.');
+	$resarchive_title = __('Are you sure you want to Restore this Archive?');
+
 	$rmarchive_msg   = __('Deleting this Plugin Archive is not reversable without a table restore.  If you really want to Delete the Plugin Archive, click \'Delete\' below.  Otherwise click \'Cancel\'.');
 	$rmarchive_title = __('Are you sure you want to Delete this Archive?');
 
@@ -1109,6 +1197,42 @@ function update_show_current() {
 	var url = '';
 
 	$(function() {
+		$('.pirestore').click(function(event) {
+			event.preventDefault();
+
+			url = $(this).attr('href');
+
+			var btnResArchive = {
+				'Cancel': {
+					text: '<?php print __('Cancel');?>',
+					id: 'btnCancel',
+					click: function() {
+						$(this).dialog('close');
+					}
+				},
+				'ResArchive': {
+					text: '<?php print __('Restore Archive');?>',
+					id: 'btnResArchive',
+					click: function() {
+						$(this).dialog('close');
+						loadUrl({url: url});
+					}
+				}
+			};
+
+			$('body').remove('#pidialog').append("<div id='pidialog'><h4><?php print $resarchive_msg;?></h4></div>");
+
+			$('#pidialog').dialog({
+				title: '<?php print $resarchive_title;?>',
+				minHeight: 80,
+				minWidth: 500,
+				buttons: btnResArchive,
+				open: function() {
+					$('.ui-dialog-buttonpane > button:last').focus();
+				}
+			});
+		});
+
 		$('.pirmarchive').click(function(event) {
 			event.preventDefault();
 
@@ -1127,7 +1251,7 @@ function update_show_current() {
 					id: 'btnDelArchive',
 					click: function() {
 						$(this).dialog('close');
-						document.location = url;
+						loadUrl({url: url});
 					}
 				}
 			};
@@ -1163,7 +1287,7 @@ function update_show_current() {
 					id: 'btnUninstall',
 					click: function() {
 						$(this).dialog('close');
-						document.location = url;
+						loadUrl({url: url});
 					}
 				}
 			};
@@ -1198,7 +1322,7 @@ function update_show_current() {
 					id: 'btnUninstall',
 					click: function() {
 						$(this).dialog('close');
-						document.location = url;
+						loadUrl({url: url});
 					}
 				}
 			};
@@ -1237,11 +1361,11 @@ function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 
 	$row .= "<td><a href='" . html_escape($plugin['webpage']) . "' target='_blank' rel='noopener'>" . filter_value($plugin_name, get_request_var('filter')) . '</a></td>';
 
-	$row .= "<td class='nowrap'>" . filter_value($plugin['description'], get_request_var('filter')) . "</td>";
+	$row .= "<td class='nowrap'>" . filter_value($plugin['description'], get_request_var('filter')) . '</td>';
 
 	if ($plugin['status'] == '-1') {
 		$status = plugin_is_compatible($plugin['directory']);
-		$row .= "<td class='nowrap'>" . __('Not Compatible, %s', $status['requires']);
+		$row .= "<td class='nowrap'>" . __('Not Compatible, \'%s\'', $status['requires']);
 	} elseif ($plugin['status'] < -1) {
 		$row .= "<td class='nowrap'>" . __('Plugin Error');
 	} else {
@@ -1252,7 +1376,7 @@ function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 		if (strpos($plugin['capabilities'], 'remote_collect:1') !== false || strpos($plugin['capabilities'], 'remote_poller:1') !== false) {
 			if ($plugin['remote_status'] == '-1') {
 				$status = plugin_is_compatible($plugin['directory']);
-				$row .= ' / ' . __('Not Compatible, %s', $status['requires']);
+				$row .= ' / ' . __('Not Compatible, \'%s\'', $status['requires']);
 			} elseif ($plugin['remote_status'] < -1) {
 				$row .= ' / ' . __('Plugin Error');
 			} else {
@@ -1283,10 +1407,10 @@ function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 		$last_updated = substr($plugin['last_updated'], 0, 16);
 	}
 
-	$row .= "<td class='nowrap'>" . filter_value($plugin['author'], get_request_var('filter')) . "</td>";
-	$row .= "<td class='nowrap'>" . html_escape($requires)          . "</td>";
-	$row .= "<td class='right'>"  . html_escape($plugin['version']) . "</td>";
-	$row .= "<td class='right'>"  . $last_updated                   . "</td>";
+	$row .= "<td class='nowrap'>" . filter_value($plugin['author'], get_request_var('filter')) . '</td>';
+	$row .= "<td class='nowrap'>" . html_escape($requires)          . '</td>';
+	$row .= "<td class='right'>"  . html_escape($plugin['version']) . '</td>';
+	$row .= "<td class='right'>"  . $last_updated                   . '</td>';
 
 	if ($include_ordering) {
 		$row .= "<td class='nowrap right'>";
@@ -1302,7 +1426,7 @@ function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 		} else {
 			$row .= '<span class="moveArrowNone"></span>';
 		}
-		$row .= "</td>";
+		$row .= '</td>';
 	} else {
 		$row .= "<td></td>";
 	}
@@ -1320,9 +1444,22 @@ function format_available_plugin_row($plugin, $last_plugin, $include_ordering, $
 	global $status_names, $config;
 	static $first_plugin = true;
 
-//  ToDo: Get the Actions completed
-//	$row = plugin_actions($plugin, $table);
-	$row = '<td style="width:1%"></td>';
+	/* action icons */
+	$row  = "<td class='nowrap' style='width:1%'>";
+
+	/* ToDo: Verify that this plugin can be installed */
+//	if (1 == 1) {
+//		$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Load and Install/Upgrade the Plugin') . "' class='linkEditMain'><i class='fas fa-file-download deviceUnknown'></i></a>";
+//	}
+
+	$row .= "<a class='pireadme' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=readme&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('View the Plugins Readme File') . "' class='linkEditMain'><i class='fas fa-file deviceDisabled'></i></a>";
+
+	/* no link to the changelog unless it exists */
+	if ($plugin['changelog'] > 0) {
+		$row .= "<a class='pichangelog' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=changelog&plugin=' . $plugin['plugin'] . '&id=' . $plugin['avail_tag_name']) . "' title='" . __esc('View the Plugins ChangeLog') . "' class='linkEditMain'><i class='fas fa-file deviceRecovering'></i></a>";
+	}
+
+	$row .= '</td>';
 
 	$uname = strtoupper($plugin['plugin']);
 	if ($uname == $plugin['plugin']) {
@@ -1333,11 +1470,11 @@ function format_available_plugin_row($plugin, $last_plugin, $include_ordering, $
 
 	$row .= "<td><a href='" . html_escape($plugin['webpage']) . "' target='_blank' rel='noopener'>" . filter_value($plugin_name, get_request_var('filter')) . '</a></td>';
 
-	$row .= "<td class='nowrap'>" . filter_value($plugin['avail_description'], get_request_var('filter')) . "</td>";
+	$row .= "<td class='nowrap'>" . filter_value($plugin['avail_description'], get_request_var('filter')) . '</td>';
 
 	if (cacti_version_compare(CACTI_VERSION, $plugin['avail_compat'], '<')) {
 		$row .= "<td class='nowrap'>" . __('Cacti Upgrade Required') . '</td>';;
-		//$row .= "<td class='nowrap'>" . __('Cacti Upgrade Required, %s', $status['avail_requires']);
+		//$row .= "<td class='nowrap'>" . __('Cacti Upgrade Required, \'%s\'', $status['avail_requires']);
 	} else {
 		$row .= "<td class='nowrap'>" . __('Compatible') . '</td>';
 	}
@@ -1354,13 +1491,13 @@ function format_available_plugin_row($plugin, $last_plugin, $include_ordering, $
 		$requires = $plugin['avail_requires'];
 	}
 
-	$row .= "<td class='nowrap'>" . filter_value($plugin['avail_author'], get_request_var('filter'))    . "</td>";
+	$row .= "<td class='nowrap'>" . filter_value($plugin['avail_author'], get_request_var('filter'))    . '</td>';
 	$row .= "<td class='nowrap'>" . html_escape($plugin['avail_compat'])    . '</td>';
 
 	if ($plugin['version'] == '') {
 		$row .= "<td class='right'>" . __esc('Not Installed')          . '</td>';
 	} else {
-		$row .= "<td class='right'>" . html_escape($plugin['version']) . "</td>";
+		$row .= "<td class='right'>" . html_escape($plugin['version']) . '</td>';
 	}
 
 	if ($plugin['last_updated'] == '') {
@@ -1369,10 +1506,10 @@ function format_available_plugin_row($plugin, $last_plugin, $include_ordering, $
 		$last_updated = substr($plugin['last_updated'], 0, 16);
 	}
 
-	$row .= "<td class='right'>" . $last_updated                             . "</td>";
-	$row .= "<td class='right'>" . html_escape($plugin['avail_tag_name'])    . "</td>";
-	$row .= "<td class='right'>" . html_escape($requires)                    . "</td>";
-	$row .= "<td class='right'>" . substr($plugin['avail_published'], 0, 16) . "</td>";
+	$row .= "<td class='right'>" . $last_updated                             . '</td>';
+	$row .= "<td class='right'>" . html_escape($plugin['avail_tag_name'])    . '</td>';
+	$row .= "<td class='right'>" . html_escape($requires)                    . '</td>';
+	$row .= "<td class='right'>" . substr($plugin['avail_published'], 0, 16) . '</td>';
 
 	if ($include_ordering) {
 		$first_plugin = false;
@@ -1385,7 +1522,11 @@ function format_archive_plugin_row($plugin, $table) {
 	global $status_names, $config;
 	static $first_plugin = true;
 
-	$row = "<td style='width:1%'><a class='pirmarchive' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=delete&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Delete this Plugin Archive') . "' class='linkEditMain'><i class='fa fa-trash-alt deviceRecovering'></i></a></td>";
+	/* action icons */
+	$row  = "<td style='width:1%'>";
+	$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Restore this Plugin Archive') . "' class='linkEditMain'><i class='fa fa-trash-restore deviceUp'></i></a>";
+	$row .= "<a class='pirmarchive' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=delete&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Delete this Plugin Archive') . "' class='linkEditMain'><i class='fa fa-trash-alt deviceRecovering'></i></a>";
+	$row .= '</td>';
 
 	$uname = strtoupper($plugin['plugin']);
 	if ($uname == $plugin['plugin']) {
@@ -1396,7 +1537,7 @@ function format_archive_plugin_row($plugin, $table) {
 
 	$row .= "<td><a href='" . html_escape($plugin['webpage']) . "' target='_blank' rel='noopener'>" . filter_value($plugin_name, get_request_var('filter')) . '</a></td>';
 
-	$row .= "<td class='nowrap'>" . filter_value($plugin['description'], get_request_var('filter')) . "</td>";
+	$row .= "<td class='nowrap'>" . filter_value($plugin['description'], get_request_var('filter')) . '</td>';
 
 	if (cacti_version_compare(CACTI_VERSION, $plugin['archive_compat'], '<')) {
 		$row .= "<td class='nowrap'>" . __('Cacti Upgrade Required') . '</td>';;
@@ -1416,17 +1557,17 @@ function format_archive_plugin_row($plugin, $table) {
 		$requires = $plugin['archive_requires'];
 	}
 
-	$row .= "<td class='nowrap'>" . filter_value($plugin['author'], get_request_var('filter'))    . "</td>";
-	$row .= "<td class='right'>" . html_escape($plugin['archive_compat'])    . '</td>';
+	$row .= "<td class='nowrap'>" . filter_value($plugin['author'], get_request_var('filter')) . '</td>';
+	$row .= "<td class='right'>" . html_escape($plugin['archive_compat']) . '</td>';
 
 	if ($plugin['version'] == '') {
 		$row .= "<td class='right'>" . __esc('Not Installed')          . '</td>';
 	} else {
-		$row .= "<td class='right'>" . html_escape($plugin['version']) . "</td>";
+		$row .= "<td class='right'>" . html_escape($plugin['version']) . '</td>';
 	}
 
-	$row .= "<td class='right'>" . html_escape($plugin['archive_requires']) . "</td>";
-	$row .= "<td class='right'>" . html_escape($plugin['archive_version']) . "</td>";
+	$row .= "<td class='right'>" . html_escape($plugin['archive_requires']) . '</td>';
+	$row .= "<td class='right'>" . html_escape($plugin['archive_version'])  . '</td>';
 
 	if ($plugin['last_updated'] == '') {
 		$last_updated = __('N/A');
@@ -1436,8 +1577,8 @@ function format_archive_plugin_row($plugin, $table) {
 
 	$archive_date = substr($plugin['archive_date'], 0, 16);
 
-	$row .= "<td class='right'>" . $last_updated . "</td>";
-	$row .= "<td class='right'>" . $archive_date . "</td>";
+	$row .= "<td class='right'>" . $last_updated . '</td>';
+	$row .= "<td class='right'>" . $archive_date . '</td>';
 
 	return $row;
 }
@@ -1492,7 +1633,7 @@ function plugin_actions($plugin, $table) {
 				$not_installed = plugin_required_installed($plugin, $table);
 
 				if ($not_installed != '') {
-					$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Install Plugin.  The following Plugins must be installed first: %s', ucfirst($not_installed)) . "' class='linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
+					$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Install Plugin.  The following Plugins must be Installed first: \'%s\'', ucfirst($not_installed)) . "' class='linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
 				} else {
 					$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=install&plugin=' . $plugin['plugin']) . "' title='" . __esc('Install Plugin') . "' class='piinstall linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
 				}
@@ -1513,14 +1654,14 @@ function plugin_actions($plugin, $table) {
 				}
 			}
 
-			$link .= "<a href='#' title='" . __esc('Plugin can not be archived before it\'s been installed.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+			$link .= "<a href='#' title='" . __esc('Plugin \'%s\' can not be Archived before it\'s been Installed.', $plugin['plugin']) . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 
 			break;
 		case '1':	// Currently Active
 			$required = plugin_required_for_others($plugin, $table);
 
 			if ($required != '') {
-				$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Uninstall.  This Plugin is required by: %s', ucfirst($required)) . "'><i class='fa fa-cog deviceUnknown'></i></a>";
+				$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Uninstall.  This Plugin is required by: \'%s\'', ucfirst($required)) . "'><i class='fa fa-cog deviceUnknown'></i></a>";
 			} else {
 				$link .= "<a class='piuninstall' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=uninstall&plugin=' . $plugin['plugin']) . "' title='" . __esc('Uninstall Plugin') . "'><i class='fa fa-cog deviceDown'></i></a>";
 			}
@@ -1528,7 +1669,7 @@ function plugin_actions($plugin, $table) {
 			$link .= "<a class='pidisable' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=disable&plugin=' . $plugin['plugin']) . "' title='" . __esc('Disable Plugin') . "'><i class='fa fa-circle deviceRecovering'></i></a>";
 
 			if ($archived) {
-				$link .= "<a href='#' title='" . __esc('Plugin already archived and unchanged in the archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+				$link .= "<a href='#' title='" . __esc('Plugin already Archived and is Unchanged in the Archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 			} else {
 				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=archive&plugin=' . $plugin['plugin']) . "' title='" . __esc('Archive the Plugin in its current state.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceUnknown'></i></a>";
 			}
@@ -1538,7 +1679,7 @@ function plugin_actions($plugin, $table) {
 			$link .= "<a class='piuninstall' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=uninstall&plugin=' . $plugin['plugin']) . "' title='" . __esc('Uninstall Plugin') . "'><i class='fa fa-cog deviceDown'></i></a>";
 
 			if ($archived) {
-				$link .= "<a href='#' title='" . __esc('Plugin already archived and unchanged in the archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+				$link .= "<a href='#' title='" . __esc('Plugin already Archived and Unchanged in the Archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 			} else {
 				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=archive&plugin=' . $plugin['plugin']) . "' title='" . __esc('Archive the Plugin in its current state.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceUnknown'></i></a>";
 			}
@@ -1548,7 +1689,7 @@ function plugin_actions($plugin, $table) {
 			$required = plugin_required_for_others($plugin, $table);
 
 			if ($required != '') {
-				$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Uninstall.  This Plugin is required by: %s', ucfirst($required)) . "'><i class='fa fa-cog deviceUnknown'></i></a>";
+				$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Uninstall.  This Plugin is required by: \'%s\'', ucfirst($required)) . "'><i class='fa fa-cog deviceUnknown'></i></a>";
 			} else {
 				$link .= "<a class='piuninstall' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=uninstall&plugin=' . $plugin['plugin']) . "' title='" . __esc('Uninstall Plugin') . "'><i class='fa fa-cog deviceDown'></i></a>";
 			}
@@ -1556,7 +1697,7 @@ function plugin_actions($plugin, $table) {
 			$link .= "<a class='pienable' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=enable&plugin=' . $plugin['plugin']) . "' title='" . __esc('Enable Plugin') . "'><i class='fa fa-circle deviceUp'></i></a>";
 
 			if ($archived) {
-				$link .= "<a href='#' title='" . __esc('Plugin already archived and unchanged in the archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+				$link .= "<a href='#' title='" . __esc('Plugin already Archived and Unchanged in the Archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 			} else {
 				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=archive&plugin=' . $plugin['plugin']) . "' title='" . __esc('Archive the Plugin in its current state.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceUnknown'></i></a>";
 			}
@@ -1566,7 +1707,7 @@ function plugin_actions($plugin, $table) {
 			$required = plugin_required_for_others($plugin, $table);
 
 			if ($required != '') {
-				$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Uninstall.  This Plugin is required by: %s', ucfirst($required)) . "'><i class='fa fa-cog deviceUnknown'></i></a>";
+				$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Uninstall.  This Plugin is required by: \'%s\'', ucfirst($required)) . "'><i class='fa fa-cog deviceUnknown'></i></a>";
 			} else {
 				$link .= "<a class='piuninstall' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=uninstall&plugin=' . $plugin['plugin']) . "' title='" . __esc('Uninstall Plugin') . "'><i class='fa fa-cog deviceDown'></i></a>";
 			}
@@ -1574,7 +1715,7 @@ function plugin_actions($plugin, $table) {
 			$link .= "<a class='pienable' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=enable&plugin=' . $plugin['plugin']) . "' title='" . __esc('Plugin was Disabled due to a Plugin Error.  Click to Re-enable the Plugin.  Search for \'DISABLING\' in the Cacti log to find the reason.') . "'><i class='fa fa-circle deviceDown'></i></a>";
 
 			if ($archived) {
-				$link .= "<a href='#' title='" . __esc('Plugin already archived and unchanged in the archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+				$link .= "<a href='#' title='" . __esc('Plugin already Archived and Unchanged in the Archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 			} else {
 				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=archive&plugin=' . $plugin['plugin']) . "' title='" . __esc('Archive the Plugin in its current state.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceUnknown'></i></a>";
 			}
@@ -1597,7 +1738,7 @@ function plugin_actions($plugin, $table) {
 
 			break;
 		default: // Old PIA
-			$path        = CACTI_PATH_PLUGINS . '/' . $plugin['plugin'];
+			$path = CACTI_PATH_PLUGINS . '/' . $plugin['plugin'];
 
 			if (!file_exists("$path/setup.php")) {
 				$link .= "<a class='pierror' href='#' title='" . __esc('Plugin directory \'%s\' is missing setup.php', $plugin['plugin']) . "' class='linkEditMain'><i class='fa fa-cog deviceUnknown'></i></a>";
@@ -1685,7 +1826,7 @@ function plugins_fetch_latest_plugins() {
 
 					if ($unchanged) {
 						$skip = true;
-						cacti_log(sprintf('SKIPPED: Plugin:%s, Tag/Release:%s Skipped as it has not changed', $plugin_name, $json_data[0]['tag_name']), false, 'PLUGIN');
+						cacti_log(sprintf('SKIPPED: Plugin:\'%s\', Tag/Release:\'%s\' Skipped as it has not changed', $plugin_name, $json_data[0]['tag_name']), false, 'PLUGIN');
 					} else {
 						$skip = false;
 					}
@@ -1765,7 +1906,7 @@ function plugins_fetch_latest_plugins() {
 
 						$pend = microtime(true);
 
-						cacti_log(sprintf('UPDATED: Plugin:%s, Tag/Release:%s Updated in %0.2f seconds.', $plugin_name, $json_data[0]['tag_name'], $pend - $pstart), false, 'PLUGIN');
+						cacti_log(sprintf('UPDATED: Plugin:\'%s\', Tag/Release:\'%s\' Updated in %0.2f seconds.', $plugin_name, $json_data[0]['tag_name'], $pend - $pstart), false, 'PLUGIN');
 					}
 				}
 			}
@@ -1786,7 +1927,7 @@ function plugins_fetch_latest_plugins() {
 
 				if ($unchanged) {
 					$skip = true;
-					cacti_log(sprintf('SKIPPED: Plugin:%s, Tag/Release:%s Skipped as it has not changed', $plugin_name, 'develop'), false, 'PLUGIN');
+					cacti_log(sprintf('SKIPPED: Plugin:\'%s\', Tag/Release:\'%s\' Skipped as it has not changed', $plugin_name, 'develop'), false, 'PLUGIN');
 				} else {
 					$skip = false;
 				}
@@ -1870,7 +2011,7 @@ function plugins_fetch_latest_plugins() {
 
 					$pend = microtime(true);
 
-					cacti_log(sprintf('UPDATED: Plugin:%s, Tag/Release:%s Updated in %0.2f seconds.', $plugin_name, 'develop', $pend - $pstart), false, 'PLUGIN');
+					cacti_log(sprintf('UPDATED: Plugin:\'%s\', Tag/Release:\'%s\' Updated in %0.2f seconds.', $plugin_name, 'develop', $pend - $pstart), false, 'PLUGIN');
 				}
 			}
 		}
@@ -1882,7 +2023,7 @@ function plugins_fetch_latest_plugins() {
 	$updated_plugins = $updated;
 
 	if (cacti_sizeof($avail_plugins)) {
-		raise_message('plugins_fetched', __('There were %s Plugins found at The Cacti Groups GitHub site and %s Plugins Tags/Releases were retreived and updated in %0.2f seconds.', $total_plugins, $updated_plugins, $end - $start), MESSAGE_LEVEL_INFO);
+		raise_message('plugins_fetched', __('There were \'%s\' Plugins found at The Cacti Groups GitHub site and \'%s\' Plugins Tags/Releases were retreived and updated in %0.2f seconds.', $total_plugins, $updated_plugins, $end - $start), MESSAGE_LEVEL_INFO);
 	} else {
 		raise_message('plugins_fetched', __('Unable to reach The Cacti Groups GitHub site.  No plugin data retrieved in %0.2f seconds.', $end-$start), MESSAGE_LEVEL_WARN);
 	}
