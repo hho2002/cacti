@@ -1774,12 +1774,12 @@ function plugin_required_installed($plugin, $table) {
 	return $not_installed;
 }
 
-function plugin_get_install_links($status) {
+function plugin_get_install_links($plugin, $table) {
 	$path = CACTI_PATH_PLUGINS . '/' . $plugin['plugin'];
 
 	$link = '';
 
-	if ($status == 0) {
+	if ($plugin['status'] == 0) {
 		if (!file_exists("$path/setup.php")) {
 			$link .= "<a class='pierror' href='#' title='" . __esc('Plugin directory \'%s\' is missing setup.php', $plugin['plugin']) . "' class='linkEditMain'><i class='fa fa-cog deviceUnknown'></i></a>";
 		} elseif (!file_exists("$path/INFO")) {
@@ -1828,7 +1828,7 @@ function plugin_actions($plugin, $table) {
 
 	switch ($plugin['status']) {
 		case '0': // Not Installed
-			$link = plugin_get_install_links($plugin['status']);
+			$link .= plugin_get_install_links($plugin, $table);
 
 			break;
 		case '1':	// Currently Active
