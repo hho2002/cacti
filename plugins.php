@@ -219,6 +219,8 @@ switch($action) {
 				SET status = 0
 				WHERE directory = ?',
 				array($plugin));
+
+			raise_message('plugin_good', __('Plugin \'%s\' has passed it\'s Configuration Check test and can not be Installed', $plugin), MESSAGE_LEVEL_INFO);
 		}
 
 		header('Location: plugins.php');
@@ -1850,7 +1852,7 @@ function plugin_actions($plugin, $table) {
 
 			break;
 		case '2': // Configuration issues
-			$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=check&plugin=' . $plugin['plugin']) . "' title='" . __esc('Check Plugins Configuration') . "' class='piinstall linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
+			$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=check&plugin=' . $plugin['plugin']) . "' title='" . __esc('Check Plugins Configuration') . "' class='piinstall linkEditMain'><i class='fa fa-cog deviceRecovering'></i></a>";
 
 			$link .= "<a href='#' class='pidisable'><i class='fa fa-cog' style='color:transparent'></i></a>";
 
