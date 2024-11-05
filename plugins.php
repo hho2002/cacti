@@ -38,6 +38,7 @@ $actions = array(
 	'enable'         => __('Enable'),
 	'disable'        => __('Disable'),
 	'uninstall'      => __('Uninstall'),
+	'check'          => __('Check Configuration'),
 
 	/* removed plugin data handling */
 	'remove_data'    => __('Remove Plugin Data'),
@@ -120,7 +121,7 @@ db_execute("CREATE TABLE IF NOT EXISTS `plugin_archive` (
 	ROW_FORMAT=DYNAMIC");
 
 /* get the list of installed plugins */
-$pluginslist = retrieve_plugin_list();
+$pluginslist = plugins_retrieve_plugin_list();
 
 set_default_action('list');
 
@@ -207,6 +208,18 @@ switch($action) {
 		break;
 	case 'enable':
 		api_plugin_enable($plugin);
+
+		header('Location: plugins.php');
+
+		break;
+	case 'check':
+		if (api_plugin_check_config($plugin)) {
+			/* set the status as installable again if check passes */
+			db_execute_prepared('UPDATE plugin_config
+				SET status = 0
+				WHERE directory = ?',
+				array($plugin));
+		}
 
 		header('Location: plugins.php');
 
@@ -461,7 +474,7 @@ function api_plugin_archive($plugin) {
 	}
 }
 
-function retrieve_plugin_list() {
+function plugins_retrieve_plugin_list() {
 	$pluginslist = array();
 
 	$temp = db_fetch_assoc('SELECT directory FROM plugin_config ORDER BY name');
@@ -1766,36 +1779,38 @@ function plugin_get_install_links($status) {
 
 	$link = '';
 
-	if (!file_exists("$path/setup.php")) {
-		$link .= "<a class='pierror' href='#' title='" . __esc('Plugin directory \'%s\' is missing setup.php', $plugin['plugin']) . "' class='linkEditMain'><i class='fa fa-cog deviceUnknown'></i></a>";
-	} elseif (!file_exists("$path/INFO")) {
-		$link .= "<a class='pierror' href='#' title='" . __esc('Plugin is lacking an INFO file') . "' class='linkEditMain'><i class='fa fa-cog deviceUnknown'></i></a>";
-	} else {
-		$not_installed = plugin_required_installed($plugin, $table);
-
-		if ($not_installed != '') {
-			$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Install Plugin.  The following Plugins must be Installed first: \'%s\'', ucfirst($not_installed)) . "' class='linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
+	if ($status == 0) {
+		if (!file_exists("$path/setup.php")) {
+			$link .= "<a class='pierror' href='#' title='" . __esc('Plugin directory \'%s\' is missing setup.php', $plugin['plugin']) . "' class='linkEditMain'><i class='fa fa-cog deviceUnknown'></i></a>";
+		} elseif (!file_exists("$path/INFO")) {
+			$link .= "<a class='pierror' href='#' title='" . __esc('Plugin is lacking an INFO file') . "' class='linkEditMain'><i class='fa fa-cog deviceUnknown'></i></a>";
 		} else {
-			$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=install&plugin=' . $plugin['plugin']) . "' title='" . __esc('Install Plugin') . "' class='piinstall linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
-		}
+			$not_installed = plugin_required_installed($plugin, $table);
 
-		$link .= "<a href='#' class='pidisable'><i class='fa fa-cog' style='color:transparent'></i></a>";
+			if ($not_installed != '') {
+				$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Install Plugin.  The following Plugins must be Installed first: \'%s\'', ucfirst($not_installed)) . "' class='linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
+			} else {
+				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=install&plugin=' . $plugin['plugin']) . "' title='" . __esc('Install Plugin') . "' class='piinstall linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
+			}
 
-		$setup_file = CACTI_PATH_BASE . '/plugins/' . $plugin['plugin'] . '/setup.php';
+			$link .= "<a href='#' class='pidisable'><i class='fa fa-cog' style='color:transparent'></i></a>";
 
-		if (file_exists($setup_file)) {
-			require_once($setup_file);
+			$setup_file = CACTI_PATH_BASE . '/plugins/' . $plugin['plugin'] . '/setup.php';
 
-			$has_data_function = "plugin_{$plugin['plugin']}_has_data";
-			$rm_data_function  = "plugin_{$plugin['plugin']}_remove_data";
+			if (file_exists($setup_file)) {
+				require_once($setup_file);
 
-			if (function_exists($has_data_function) && function_exists($rm_data_function) && $has_data_function()) {
-				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=remove_data&plugin=' . $plugin['plugin']) . "' title='" . __esc('Remove Plugin Data Tables and Settings') . "' class='pirmdata'><i class='fa fa-trash deviceDisabled'></i></a>";
+				$has_data_function = "plugin_{$plugin['plugin']}_has_data";
+				$rm_data_function  = "plugin_{$plugin['plugin']}_remove_data";
+
+				if (function_exists($has_data_function) && function_exists($rm_data_function) && $has_data_function()) {
+					$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=remove_data&plugin=' . $plugin['plugin']) . "' title='" . __esc('Remove Plugin Data Tables and Settings') . "' class='pirmdata'><i class='fa fa-trash deviceDisabled'></i></a>";
+				}
 			}
 		}
-	}
 
-	$link .= "<a href='#' title='" . __esc('Plugin \'%s\' can not be Archived before it\'s been Installed.', $plugin['plugin']) . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+		$link .= "<a href='#' title='" . __esc('Plugin \'%s\' can not be Archived before it\'s been Installed.', $plugin['plugin']) . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+	}
 
 	return $link;
 }
@@ -1835,7 +1850,7 @@ function plugin_actions($plugin, $table) {
 
 			break;
 		case '2': // Configuration issues
-			$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=install&plugin=' . $plugin['plugin']) . "' title='" . __esc('Install Plugin') . "' class='piinstall linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
+			$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=check&plugin=' . $plugin['plugin']) . "' title='" . __esc('Check Plugins Configuration') . "' class='piinstall linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
 
 			$link .= "<a href='#' class='pidisable'><i class='fa fa-cog' style='color:transparent'></i></a>";
 
