@@ -132,7 +132,7 @@ if (isset_request_var('plugin')) {
 
 	$plugin = sanitize_search_string(get_request_var('plugin'));
 
-	if (!in_array($plugin, $pluginslist, true) && ($action != 'changelog' && $action != 'readme' && $action != 'load')) {
+	if (!in_array($plugin, $pluginslist, true) && ($action != 'changelog' && $action != 'readme' && $action != 'load' && $action != 'install')) {
 		raise_message('invalid_plugin', __('The action \'%s\' on Plugin \'%s\' can not be performed due to the Plugin not being installed', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
 		header('Location: plugins.php');
 		exit;
@@ -1829,11 +1829,9 @@ function plugin_actions($plugin, $table) {
 		case '2': // Configuration issues
 			$link .= "<a class='piuninstall' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=uninstall&plugin=' . $plugin['plugin']) . "' title='" . __esc('Uninstall Plugin') . "'><i class='fa fa-cog deviceDown'></i></a>";
 
-			if ($archived) {
-				$link .= "<a href='#' title='" . __esc('Plugin already Archived and Unchanged in the Archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
-			} else {
-				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=archive&plugin=' . $plugin['plugin']) . "' title='" . __esc('Archive the Plugin in its current state.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceUnknown'></i></a>";
-			}
+			$link .= "<a href='#' class='pidisable'><i class='fa fa-cog' style='color:transparent'></i></a>";
+
+			$link .= "<a href='#' title='" . __esc('A Plugin can not be Archived when it has Configuration Issues.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 
 			break;
 		case '4':	// Installed but not active
