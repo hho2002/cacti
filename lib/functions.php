@@ -3293,7 +3293,11 @@ function get_template_account($user = '') {
  * @param  $user_id - (int) the ID of the user
  *
  * @return mixed the username */
-function get_username($user_id) {
+function get_username($user_id = 0) {
+	if ($user_id == 0) {
+		$user_id = $_SESSION[SESS_USER_ID];
+	}
+
 	return db_fetch_cell_prepared('SELECT username FROM user_auth WHERE id = ?', array($user_id));
 }
 
