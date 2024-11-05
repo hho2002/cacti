@@ -125,6 +125,19 @@ $pluginslist = plugins_retrieve_plugin_list();
 
 set_default_action('list');
 
+/**
+ * this is for legacy support for plugins like syslog
+ * that are dependent on the mode request variable
+ * to be set.
+ */
+if (isset_request_var('mode')) {
+	set_request_var('action', get_nfilter_request_var('mode'));
+
+	if (isset_request_var('id')) {
+		set_request_var('plugin', get_nfilter_request_var('id'));
+	}
+}
+
 $action = get_nfilter_request_var('action');
 
 /* pre-check for actions that will fail by default */

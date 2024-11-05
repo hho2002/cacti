@@ -769,12 +769,16 @@ function api_plugin_install($plugin) {
 				SET status = 4
 				WHERE directory = ?',
 				array($plugin));
+
+			cacti_log(sprintf('NOTE: Cacti Plugin %s has been installed by %s', $plugin, get_username()), false, 'PLUGIN');
 		} else {
 			// Set the plugin as "needs configuration"
 			db_execute_prepared('UPDATE plugin_config
 				SET status = 2
 				WHERE directory = ?',
 				array($plugin));
+
+			cacti_log(sprintf('WARNING: Cacti Plugin %s was not installed by %s due to Configuration Issues', $plugin, get_username()), false, 'PLUGIN');
 		}
 	} else {
 		raise_message('install_error', __('The Plugin in the directory \'%s\' does not include an install function \'%s()\'.  This function must exist for the plugin to be installed.', $plugin, $function), MESSAGE_LEVEL_ERROR);
@@ -871,6 +875,8 @@ function api_plugin_uninstall($plugin, $tables = true) {
 	}
 
 	api_plugin_replicate_config();
+
+	cacti_log(sprintf('NOTE: Cacti Plugin %s has been uninstalled by %s', $plugin, get_username()), false, 'PLUGIN');
 }
 
 function api_plugin_check_config($plugin) {
@@ -903,6 +909,8 @@ function api_plugin_enable($plugin) {
 			SET status = 1
 			WHERE directory = ?',
 			array($plugin));
+
+		cacti_log(sprintf('WARNING: Cacti Plugin %s has been enabled by %s', $plugin, get_username()), false, 'PLUGIN');
 	}
 }
 
@@ -938,6 +946,8 @@ function api_plugin_disable($plugin) {
 		array($plugin));
 
 	api_plugin_replicate_config();
+
+	cacti_log(sprintf('WARNING: Cacti Plugin %s has been disabled by %s', $plugin, get_username()), false, 'PLUGIN');
 }
 
 function api_plugin_remove_data($plugin) {
