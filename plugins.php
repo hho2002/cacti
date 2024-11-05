@@ -213,7 +213,9 @@ switch($action) {
 
 		break;
 	case 'check':
-		if (api_plugin_check_config($plugin)) {
+		$response = api_plugin_check_config($plugin);
+
+		if ($response === true) {
 			/* set the status as installable again if check passes */
 			db_execute_prepared('UPDATE plugin_config
 				SET status = 0
@@ -221,6 +223,8 @@ switch($action) {
 				array($plugin));
 
 			raise_message('plugin_good', __('Plugin \'%s\' has passed it\'s Configuration Check test and can not be Installed', $plugin), MESSAGE_LEVEL_INFO);
+		} elseif ($response === null) {
+			raise_message('plugin_good', __('Plugin \'%s\' Check Configuration function returned a null response which is invalid.  Please check with Plugin Developer for an update.', $plugin), MESSAGE_LEVEL_WARN);
 		}
 
 		header('Location: plugins.php');
