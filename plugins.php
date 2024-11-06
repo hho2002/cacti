@@ -147,8 +147,17 @@ if (isset_request_var('plugin')) {
 
 	$plugin = sanitize_search_string(get_request_var('plugin'));
 
-	if (!in_array($plugin, $pluginslist, true) && ($action != 'changelog' && $action != 'readme' && $action != 'load' && $action != 'install' && $action != 'confirm')) {
-		raise_message('invalid_plugin', __('The action \'%s\' on Plugin \'%s\' can not be performed due to the Plugin not being installed', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
+	$safe_actions = array(
+		'changelog',
+		'readme',
+		'load',
+		'install',
+		'confirm',
+		'delete'
+	);
+
+	if (!in_array($plugin, $pluginslist, true) && !in_array($action, $safe_actions, true)) {
+		raise_message('invalid_plugin', __('The action \'%s\' on Plugin \'%s\' can not be performed due to the Plugin in it\'s current state.', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
 		header('Location: plugins.php');
 		exit;
 	} elseif (in_array($plugin, $plugins_integrated, true)) {
