@@ -52,8 +52,6 @@ $actions = array(
 	'archive'        => __('Archive'),
 	'restore'        => __('Archive Restore'),
 	'delete'         => __('Archive Delete'),
-	'upgrade'        => __('Upgrade'),
-	'downgrade'      => __('Downgrade'),
 
 	/* manage downloaded content */
 	'load'           => __('Install from Downloaded Plugins'),
@@ -179,6 +177,15 @@ switch($action) {
 		bottom_footer();
 
 		break;
+	case 'load':
+		$tag = get_nfilter_request_var('tag');
+
+		api_plugin_archive_restore($plugin, $tag, 'available');
+
+		header('Location: plugins.php?state=-99');
+		exit;
+
+		break;
 	case 'readme':
 		$tag = get_nfilter_request_var('tag');
 
@@ -287,17 +294,10 @@ switch($action) {
 		header('Location: plugins.php' . ($option != '' ? '&' . $option:''));
 
 		break;
-	case 'upgrade':
-	case 'downgrade':
-		// Do something
-
-		header('Location: plugins.php');
-
-		break;
 	case 'restore':
 		$id = get_filter_request_var('id');
 
-		api_plugin_archive_restore($plugin, $id);
+		api_plugin_archive_restore($plugin, $id, 'archive');
 
 		header('Location: plugins.php');
 
@@ -352,15 +352,24 @@ function api_plugin_archive_remove($plugin, $id) {
 	raise_message('plugin_archive_removed', __('The Archive for Plugin \'%s\' has been removed.', $plugin), MESSAGE_LEVEL_INFO);
 }
 
-function api_plugin_archive_restore($plugin, $id) {
-	$archive = db_fetch_cell_prepared('SELECT archive
-		FROM plugin_archive
-		WHERE plugin = ?
-		AND id = ?',
-		array($plugin, $id));
+function api_plugin_archive_restore($plugin, $id, $type = 'archive') {
+	if ($type == 'archive') {
+		$archive = db_fetch_cell_prepared('SELECT archive
+			FROM plugin_archive
+			WHERE plugin = ?
+			AND id = ?',
+			array($plugin, $id));
+	} else {
+		$archive = db_fetch_cell_prepared('SELECT archive
+			FROM plugin_available
+			WHERE plugin = ?
+			AND tag_name = ?',
+			array($plugin, $id));
+	}
 
 	if ($archive != '') {
-		$tmpfile  = sys_get_temp_dir() . '/' . $plugin . '_' . rand() . '.tar.gz';
+		$tmpfile  = sys_get_temp_dir() . '/' . $plugin . '_' . rand() . '.tar.gz';;
+		$pharfile = "phar://{$tmpfile}";
 
 		$file_data = base64_decode($archive);
 
@@ -377,19 +386,51 @@ function api_plugin_archive_restore($plugin, $id) {
 			/* create directory if required */
 			if (!is_dir($restore_path)) {
 				if (!mkdir($restore_path, 0755, true)) {
-					raise_message('archive_failed', __('Restore failed!  The Plugin \'%s\' archive Restore Failed.  Unable to create directory \'%s\'.', $plugin, $restore_path), MESSAGE_LEVEL_ERROR);
+					if ($type == 'archive') {
+						raise_message('restore_failed', __('Restore failed!  The Plugin \'%s\' archive Restore failed.  Unable to create directory \'%s\'.', $plugin, $restore_path), MESSAGE_LEVEL_ERROR);
+					} else {
+						raise_message('restore_failed', __('Restore failed!  The available Plugin \'%s\' Load failed.  Unable to create directory \'%s\'.', $plugin, $restore_path), MESSAGE_LEVEL_ERROR);
+					}
+
+					$archive->__destruct();
+					unlink($tmpfile);
+
 					return false;
 				}
 			}
 
-			/* get the list of files in the archive */
+			/* get the list of files and directories from inside the archive file */
 			$archive_files = array();
+
 			foreach (new RecursiveIteratorIterator($archive) as $file) {
-				$file = str_replace("phar://{$tmpfile}", '', $file->getPathname());
-				$archive_files[$file] = $file;
+				/**
+				 * archives from github have an extra directory
+				 * remove it.
+				 *
+				 * an example from the resulting array:
+				 * [CHANGELOG.md] => /Cacti-plugin_cycle-e941f17/CHANGELOG.md
+				 */
+				if ($type != 'archive') {
+					$pfile    = str_replace($pharfile, '', $file->getPathname());
+					$tfile    = ltrim($pfile, '/');
+					$paths    = explode('/', $tfile);
+					$bad_path = array_shift($paths);
+					$tfile    = implode('/', $paths);
+
+					/* skip hidden files like .github* */
+					if (substr($tfile, 0, 1) == '.' && $tfile != '.htaccess') {
+						continue;
+					}
+
+					$archive_files[$tfile] = $pfile;
+				} else {
+					$tfile = str_replace("phar://{$tmpfile}", '', $file->getPathname());
+
+					$archive_files[$tfile] = $tfile;
+				}
 			}
 
-			/* get the list of files in the plugin direcotory */
+			/* get the list of files in the current plugin direcotory */
 			$dir_iterator = new RecursiveDirectoryIterator($restore_path);
 			$iterator     = new RecursiveIteratorIterator($dir_iterator, RecursiveIteratorIterator::SELF_FIRST);
 
@@ -404,33 +445,92 @@ function api_plugin_archive_restore($plugin, $id) {
 				$current_files[$file] = $file;
 			}
 
+			/* relative plugin data locations that should not be remove */
+			$info_file = CACTI_PATH_PLUGINS . '/' . $plugin . '/INFO';
+			$noremove  = array();
+			if (file_exists($info_file)) {
+				$info = plugin_load_info_file($info_file);
+
+				if (isset($info['noremove'])) {
+					$noremove = explode(' ', $info['noremove']);
+				}
+			}
+
 			/* remove files that are not in the archive */
 			foreach ($current_files as $file) {
 				if (!is_dir("$restore_path/$file") && !isset($archive_files[$file])) {
 					if (basename($file) !== 'config.php' && basename($file) != 'config_local.php') {
-						// Let's not do that until we figure out weathermap.
-						// unlink("$restore_path/$file");
+						if (!in_array(dirname($file), $noremove)) {
+							// Let's not do that until we figure out weathermap.
+							// We need a discussion by the cactigroup as well
+							// unlink("$restore_path/$file");
+						}
 					}
 				}
 			}
 
-			/* extract the file to the archive */
-			$archive->extractTo($restore_path, null, true);
+			/* load the archive into memory */
+			Phar::loadPhar($tmpfile, 'my.tgz');
+
+			/**
+			 * put yourself into the base directory in order to
+			 * be able to use basenames to create things like
+			 * directories.
+			 */
+			chdir($restore_path);
+
+			foreach($archive_files as $basefile => $pharpath) {
+				$output = file_get_contents("phar://my.tgz{$pharpath}");
+
+				if (strlen($output)) {
+					$rfile = ltrim($basefile, '/');
+
+					if (basename($rfile) != $rfile) {
+						if (!is_dir(dirname($rfile)) && !mkdir(dirname($rfile), 0755, true)) {
+							if ($type == 'archive') {
+								raise_message('restore_failed', __('Restore failed!  The archived Plugin \'%s\' Restore failed. Unable to create directory %s', $plugin, dirname($basefile)), MESSAGE_LEVEL_INFO);
+							} else {
+								raise_message('restore_failed', __('Load failed!  The available Plugin \'%s\' Load failed. Unable to create directory %s', $plugin, dirname($basefile)), MESSAGE_LEVEL_INFO);
+							}
+
+							$archive->__destruct();
+							unlink($tmpfile);
+
+							return false;
+						}
+					}
+
+					file_put_contents($restore_path . '/' . $basefile, $output);
+				}
+			}
+
 			$archive->__destruct();
 
 			/* remove the archive file */
 			unlink($tmpfile);
 
-			raise_message('archive_restored', __('Restore succeeded!  The Plugin \'%s\' archive Restore succeeded.', $plugin), MESSAGE_LEVEL_INFO);
+			if ($type == 'archive') {
+				raise_message('archive_restored', __('Restore succeeded!  The archived Plugin \'%s\' Restore succeeded.', $plugin), MESSAGE_LEVEL_INFO);
+			} else {
+				raise_message('archive_restored', __('Load succeeded!  The available Plugin \'%s\' Load succeeded.', $plugin), MESSAGE_LEVEL_INFO);
+			}
 
 			return true;
 		} else {
-			raise_message('archive_failed', __('Restore failed!  The Plugin \'%s\' archive Restore Failed.  Check the cacti.log for warnings.', $plugin), MESSAGE_LEVEL_ERROR);
+			if ($type == 'archive') {
+				raise_message('archive_failed', __('Restore failed!  The archived Plugin \'%s\' Restore failed.  Check the cacti.log for warnings.', $plugin), MESSAGE_LEVEL_ERROR);
+			} else {
+				raise_message('archive_failed', __('Load failed!  The available Plugin \'%s\' Load failed.  Check the cacti.log for warnings.', $plugin), MESSAGE_LEVEL_ERROR);
+			}
 
 			return false;
 		}
 	} else {
-		raise_message('plugin_archive_not_found', __('Restore failed!  Unable to locate the Archive for Plugin \'%s\' in the database.', $plugin), MESSAGE_LEVEL_ERROR);
+		if ($type == 'archive') {
+			raise_message('plugin_archive_not_found', __('Restore failed!  Unable to locate the archive record for Plugin \'%s\' in the database.', $plugin), MESSAGE_LEVEL_ERROR);
+		} else {
+			raise_message('plugin_archive_not_found', __('Load failed!  Unable to locate the available record for Plugin \'%s\' in the database.', $plugin), MESSAGE_LEVEL_ERROR);
+		}
 
 		return false;
 	}
@@ -1809,10 +1909,6 @@ function format_available_plugin_row($plugin, $table) {
 	$row .= "<td class='right'>" . html_escape($requires)                    . '</td>';
 	$row .= "<td class='right'>" . substr($plugin['avail_published'], 0, 16) . '</td>';
 
-	if ($include_ordering) {
-		$first_plugin = false;
-	}
-
 	return $row;
 }
 
@@ -1826,28 +1922,28 @@ function format_archive_plugin_row($plugin, $table) {
 	if (plugins_valid_version_range($plugin['archive_compat'])) {
 		if (plugins_valid_dependencies($plugin['archive_requires'])) {
 			if ($plugin['version'] == '') {
-				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Load this Plugin from the Archive') . "' class='linkEditMain'><i class='fas fa-download deviceRecovering'></i></a>";
+				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Load this Plugin from the archive') . "' class='linkEditMain'><i class='fas fa-download deviceRecovering'></i></a>";
 				$status = __('Compatible, Loadable');
 			} elseif (cacti_version_compare($plugin['archive_version'], $plugin['version'], '<')) {
-				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Downgrade this Plugin from the Archive') . "' class='linkEditMain'><i class='fas fa-download deviceRecovering'></i></a>";
+				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Downgrade this Plugin from the archive') . "' class='linkEditMain'><i class='fas fa-download deviceRecovering'></i></a>";
 				$status = __('Compatible, Downgrade');
 			} elseif (cacti_version_compare($plugin['archive_version'], $plugin['version'], '=')) {
-				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Restore Plugin from the Archive') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
+				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Restore Plugin from the archive') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
 				$status = __('Compatible, Same Version');
 			} else {
-				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Upgrade Plugin from the Archive') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
+				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Upgrade Plugin from the archive') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
 				$status = __('Compatible, Upgradable');
 			}
 		} else {
-			$row .= "<a class='piload' href='#' title='" . __esc('Unable to Restore the Archive due to Plugin Dependencies not being met.') . "' class='linkEditMain'><i class='fas fa-download deviceDisabled'></i></a>";
+			$row .= "<a class='piload' href='#' title='" . __esc('Unable to Restore the archive due to Plugin Dependencies not being met.') . "' class='linkEditMain'><i class='fas fa-download deviceDisabled'></i></a>";
 			$status = __('Not Compatible, Dependencies');
 		}
 	} else {
-		$row .= "<a class='piload' href='#' title='" . __esc('Unable to Restore the Archive due to a bad Cacti version.') . "' class='linkEditMain'><i class='fas fa-download deviceDisabled'></i></a>";
+		$row .= "<a class='piload' href='#' title='" . __esc('Unable to Restore the archive due to a bad Cacti version.') . "' class='linkEditMain'><i class='fas fa-download deviceDisabled'></i></a>";
 		$status = __('Not Compatible, Cacti Version');
 	}
 
-	$row .= "<a class='pirmarchive' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=delete&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Delete this Plugin Archive') . "' class='linkEditMain'><i class='fa fa-trash-alt deviceRecovering'></i></a>";
+	$row .= "<a class='pirmarchive' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=delete&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Delete this Plugin archive') . "' class='linkEditMain'><i class='fa fa-trash-alt deviceRecovering'></i></a>";
 	$row .= '</td>';
 
 	$uname = strtoupper($plugin['plugin']);
@@ -1963,7 +2059,7 @@ function plugin_get_install_links($plugin, $table) {
 			}
 		}
 
-		$link .= "<a href='#' title='" . __esc('Plugin \'%s\' can not be Archived before it\'s been Installed.', $plugin['plugin']) . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+		$link .= "<a href='#' title='" . __esc('Plugin \'%s\' can not be archived before it\'s been Installed.', $plugin['plugin']) . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 	}
 
 	return $link;
@@ -1997,9 +2093,9 @@ function plugin_actions($plugin, $table) {
 			$link .= "<a class='pidisable' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=disable&plugin=' . $plugin['plugin']) . "' title='" . __esc('Disable Plugin') . "'><i class='fa fa-circle deviceRecovering'></i></a>";
 
 			if ($archived) {
-				$link .= "<a href='#' title='" . __esc('Plugin already Archived and is Unchanged in the Archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+				$link .= "<a href='#' title='" . __esc('Plugin already archived and is Unchanged in the archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 			} else {
-				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=archive&plugin=' . $plugin['plugin']) . "' title='" . __esc('Archive the Plugin in its current state.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceUnknown'></i></a>";
+				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=archive&plugin=' . $plugin['plugin']) . "' title='" . __esc('archive the Plugin in its current state.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceUnknown'></i></a>";
 			}
 
 			break;
@@ -2008,7 +2104,7 @@ function plugin_actions($plugin, $table) {
 
 			$link .= "<a href='#' class='pidisable'><i class='fa fa-cog' style='color:transparent'></i></a>";
 
-			$link .= "<a href='#' title='" . __esc('A Plugin can not be Archived when it has Configuration Issues.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+			$link .= "<a href='#' title='" . __esc('A Plugin can not be archived when it has Configuration Issues.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 
 			break;
 		case '4':	// Installed but not active
@@ -2023,7 +2119,7 @@ function plugin_actions($plugin, $table) {
 			$link .= "<a class='pienable' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=enable&plugin=' . $plugin['plugin']) . "' title='" . __esc('Enable Plugin') . "'><i class='fa fa-circle deviceUp'></i></a>";
 
 			if ($archived) {
-				$link .= "<a href='#' title='" . __esc('Plugin already Archived and Unchanged in the Archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+				$link .= "<a href='#' title='" . __esc('Plugin already archived and Unchanged in the archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 			} else {
 				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=archive&plugin=' . $plugin['plugin']) . "' title='" . __esc('Archive the Plugin in its current state.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceUnknown'></i></a>";
 			}
@@ -2041,7 +2137,7 @@ function plugin_actions($plugin, $table) {
 			$link .= "<a class='pienable' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=enable&plugin=' . $plugin['plugin']) . "' title='" . __esc('Plugin was Disabled due to a Plugin Error.  Click to Re-enable the Plugin.  Search for \'DISABLING\' in the Cacti log to find the reason.') . "'><i class='fa fa-circle deviceDown'></i></a>";
 
 			if ($archived) {
-				$link .= "<a href='#' title='" . __esc('Plugin already Archived and Unchanged in the Archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
+				$link .= "<a href='#' title='" . __esc('Plugin already archived and Unchanged in the archive.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceDisabled'></i></a>";
 			} else {
 				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=archive&plugin=' . $plugin['plugin']) . "' title='" . __esc('Archive the Plugin in its current state.') . "' class='piarchive linkEditMain'><i class='fa fa-box deviceUnknown'></i></a>";
 			}
