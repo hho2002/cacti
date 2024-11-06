@@ -868,7 +868,7 @@ function update_show_current() {
 
 			break;
 		case 8:
-			$sql_where .= ($sql_where != '' ? ' AND ':'WHERE ') . ' pi.status IN(1,4,7) OR pi.status IS NULL';
+			$sql_where .= ($sql_where != '' ? ' AND ':'WHERE ') . ' pi.status IN(0,1,2,4,7) OR pi.status IS NULL';
 
 			break;
 		case 5:
