@@ -1032,7 +1032,7 @@ function update_show_current() {
 					'display' => $config['poller_id'] == 1 ? __('Status'):__('Main / Remote Status'),
 					'align'   => 'left',
 					'sort'    => 'ASC',
-					'tip'     => __('The status of this Plugin.')
+					'tip'     => __('The Status of this available Plugin.  Loadable means it is currently not installed and can be loaded.')
 				),
 				'pi.author' => array(
 					'display' => __('Author'),
@@ -1175,7 +1175,7 @@ function update_show_current() {
 					'display' => $config['poller_id'] == 1 ? __('Status'):__('Main / Remote Status'),
 					'align'   => 'left',
 					'sort'    => 'ASC',
-					'tip'     => __('The status of this Plugin.')
+					'tip'     => __('The Status of this available Plugin.  Loadable means it is currently not installed and can be loaded.')
 				),
 				'pi.author' => array(
 					'display' => __('Author'),
@@ -1732,20 +1732,27 @@ function format_available_plugin_row($plugin, $table) {
 		if (plugins_valid_dependencies($plugin['avail_requires'])) {
 			if ($plugin['version'] == '' && $avail_version != 'develop') {
 				$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Load this Plugin from available Cacti Plugins') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
+				$status = __('Compatible, Loadable');
 			} elseif ($avail_version == 'develop') {
 				$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Upgrade this Plugin from the available Cacti Plugins') . "' class='linkEditMain'><i class='fas fa-download deviceDown'></i></a>";
+				$status = __('Compatible, Upgrade');
 			} elseif (cacti_version_compare($avail_version, $plugin['version'], '<')) {
 				$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Downgrade this Plugin from the available Cacti Plugins') . "' class='linkEditMain'><i class='fas fa-download deviceRecovering'></i></a>";
+				$status = __('Compatible, Downgrade');
 			} elseif (cacti_version_compare($avail_version, $plugin['version'], '=')) {
 				$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Replace Plugin from the available Cacti Plugins') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
+				$status = __('Compatible, Same Version');
 			} else {
 				$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Upgrade Plugin from the available Cacti Plugins') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
+				$status = __('Compatible, Upgrade');
 			}
 		} else {
 			$row .= "<a class='piload' href='#' title='" . __esc('Unable to Restore the Archive due to Plugin Dependencies not being met.') . "' class='linkEditMain'><i class='fas fa-download deviceDisabled'></i></a>";
+			$status = __('Not Compatible, Dependencies');
 		}
 	} else {
 		$row .= "<a class='piload' href='#' title='" . __esc('Unable to Load due to a bad Cacti version.') . "' class='linkEditMain'><i class='fas fa-download deviceDisabled'></i></a>";
+		$status = __('Not Compatible, Cacti Version');
 	}
 
 	$row .= "<a class='pireadme' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=readme&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('View the Plugins Readme File') . "' class='linkEditMain'><i class='fas fa-file deviceDisabled'></i></a>";
@@ -1768,12 +1775,7 @@ function format_available_plugin_row($plugin, $table) {
 
 	$row .= "<td class='nowrap'>" . filter_value($plugin['avail_description'], get_request_var('filter')) . '</td>';
 
-	if (cacti_version_compare(CACTI_VERSION, $plugin['avail_compat'], '<')) {
-		$row .= "<td class='nowrap'>" . __('Cacti Upgrade Required') . '</td>';;
-		//$row .= "<td class='nowrap'>" . __('Cacti Upgrade Required, \'%s\'', $status['avail_requires']);
-	} else {
-		$row .= "<td class='nowrap'>" . __('Compatible') . '</td>';
-	}
+	$row .= "<td class='nowrap'>" . $status . '</td>';
 
 	if ($plugin['avail_requires'] != '') {
 		$requires = explode(' ', $plugin['avail_requires']);
@@ -1825,18 +1827,24 @@ function format_archive_plugin_row($plugin, $table) {
 		if (plugins_valid_dependencies($plugin['archive_requires'])) {
 			if ($plugin['version'] == '') {
 				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Load this Plugin from the Archive') . "' class='linkEditMain'><i class='fas fa-download deviceRecovering'></i></a>";
+				$status = __('Compatible, Loadable');
 			} elseif (cacti_version_compare($plugin['archive_version'], $plugin['version'], '<')) {
 				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Downgrade this Plugin from the Archive') . "' class='linkEditMain'><i class='fas fa-download deviceRecovering'></i></a>";
+				$status = __('Compatible, Downgrade');
 			} elseif (cacti_version_compare($plugin['archive_version'], $plugin['version'], '=')) {
 				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Restore Plugin from the Archive') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
+				$status = __('Compatible, Same Version');
 			} else {
 				$row .= "<a class='pirestore' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=restore&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Upgrade Plugin from the Archive') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
+				$status = __('Compatible, Upgradable');
 			}
 		} else {
 			$row .= "<a class='piload' href='#' title='" . __esc('Unable to Restore the Archive due to Plugin Dependencies not being met.') . "' class='linkEditMain'><i class='fas fa-download deviceDisabled'></i></a>";
+			$status = __('Not Compatible, Dependencies');
 		}
 	} else {
 		$row .= "<a class='piload' href='#' title='" . __esc('Unable to Restore the Archive due to a bad Cacti version.') . "' class='linkEditMain'><i class='fas fa-download deviceDisabled'></i></a>";
+		$status = __('Not Compatible, Cacti Version');
 	}
 
 	$row .= "<a class='pirmarchive' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=delete&plugin=' . $plugin['plugin'] . '&id=' . $plugin['id']) . "' title='" . __esc('Delete this Plugin Archive') . "' class='linkEditMain'><i class='fa fa-trash-alt deviceRecovering'></i></a>";
@@ -1853,12 +1861,7 @@ function format_archive_plugin_row($plugin, $table) {
 
 	$row .= "<td class='nowrap'>" . filter_value($plugin['description'], get_request_var('filter')) . '</td>';
 
-
-	if (cacti_version_compare(CACTI_VERSION, $plugin['archive_compat'], '<')) {
-		$row .= "<td class='nowrap'>" . __('Cacti Upgrade Required') . '</td>';;
-	} else {
-		$row .= "<td class='nowrap'>" . __('Compatible') . '</td>';
-	}
+	$row .= "<td class='nowrap'>" . $status . '</td>';
 
 	if ($plugin['archive_requires'] != '') {
 		$requires = explode(' ', $plugin['archive_requires']);
