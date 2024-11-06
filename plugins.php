@@ -1830,8 +1830,13 @@ function format_available_plugin_row($plugin, $table) {
 
 	if (plugins_valid_version_range($plugin['avail_compat'])) {
 		if (plugins_valid_dependencies($plugin['avail_requires'])) {
-			if ($plugin['version'] == '' && $avail_version != 'develop') {
-				$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Load this Plugin from available Cacti Plugins') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
+			if ($plugin['version'] == '') {
+				if ($avail_version != 'develop') {
+					$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Load this Plugin from available Cacti Plugins') . "' class='linkEditMain'><i class='fas fa-download deviceUp'></i></a>";
+				} else {
+					$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Load this Plugin from the available Cacti Plugins') . "' class='linkEditMain'><i class='fas fa-download deviceDown'></i></a>";
+				}
+
 				$status = __('Compatible, Loadable');
 			} elseif ($avail_version == 'develop') {
 				$row .= "<a class='piload' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=load&plugin=' . $plugin['plugin'] . '&tag=' . $plugin['avail_tag_name']) . "' title='" . __esc('Upgrade this Plugin from the available Cacti Plugins') . "' class='linkEditMain'><i class='fas fa-download deviceDown'></i></a>";
