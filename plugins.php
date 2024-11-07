@@ -62,6 +62,9 @@ $actions = array(
 	/* remote poller plugin functions */
 	'remote_enable'  => __('Remote Enable'),
 	'remote_disable' => __('Remote Disable'),
+
+	/* drag and drop */
+	'ajax_dnd'       => __('Drag and Drop'),
 );
 
 $status_names = array(
@@ -151,7 +154,8 @@ if (isset_request_var('plugin')) {
 		'load',
 		'install',
 		'confirm',
-		'delete'
+		'delete',
+		'ajax_dnd'
 	);
 
 	if (!in_array($plugin, $pluginslist, true) && !in_array($action, $safe_actions, true)) {
@@ -316,9 +320,66 @@ switch($action) {
 		header('Location: plugins.php');
 
 		break;
+	case 'ajax_dnd':
+		plugin_reorder();
+
+		header('Location: plugins.php');
+
+		break;
 }
 
 exit;
+
+function plugin_reorder() {
+	$dnd = get_nfilter_request_var('dnd');
+
+	if (cacti_sizeof($dnd)) {
+		$plugins = db_fetch_assoc('SELECT * FROM plugin_config ORDER BY id');
+		$columns = array_keys($plugins[0]);
+
+		$plugins_reorder = array_rekey($plugins, 'id', $columns);
+
+		foreach($dnd as $plugin) {
+			$id = str_replace('line', '', $plugin);
+			input_validate_input_number($id, 'id');
+
+			$order[] = $id;
+		}
+
+		$sequence = 1;
+
+		$sql = 'REPLACE INTO plugin_config
+			(id, directory, name, status, author, webpage, version, last_updated)
+			VALUES ';
+
+		$params = array();
+
+		foreach($order as $id) {
+			if (isset($plugins_reorder[$id])) {
+				$plugins_reorder[$id]['id'] = $sequence;
+
+				$sql .= ($sequence > 1 ? ',':'') . '(?, ?, ?, ?, ?, ?, ?, ?)';
+
+				$params[] = $plugins_reorder[$id]['id'];
+				$params[] = $plugins_reorder[$id]['directory'];
+				$params[] = $plugins_reorder[$id]['name'];
+				$params[] = $plugins_reorder[$id]['status'];
+				$params[] = $plugins_reorder[$id]['author'];
+				$params[] = $plugins_reorder[$id]['webpage'];
+				$params[] = $plugins_reorder[$id]['version'];
+				$params[] = $plugins_reorder[$id]['last_updated'];
+
+				$sequence++;
+			}
+		}
+
+		/* resequence it one transaction */
+		db_execute_prepared($sql, $params);
+
+		/* remove anything invalid */
+		db_execute_prepared('DELETE FROM plugin_config WHERE id >= ?', array($sequence));
+	}
+}
 
 function api_plugin_get_available_file_contents($plugin, $tag, $filetype) {
 	include_once(CACTI_PATH_INCLUDE . '/vendor/parsedown/Parsedown.php');
@@ -608,10 +669,10 @@ function api_plugin_archive($plugin) {
 function plugins_retrieve_plugin_list() {
 	$pluginslist = array();
 
-	$temp = db_fetch_assoc('SELECT directory FROM plugin_config ORDER BY name');
+	$temp = db_fetch_assoc('SELECT directory AS plugin FROM plugin_config ORDER BY name');
 
 	foreach ($temp as $t) {
-		$pluginslist[] = $t['directory'];
+		$pluginslist[] = $t['plugin'];
 	}
 
 	return $pluginslist;
@@ -826,103 +887,267 @@ function update_show_current() {
 
 	$table = plugins_load_temp_table();
 
-	?>
-	<script type="text/javascript">
-	function applyFilter() {
-		if ($('#state').val() == 6) {
-			strURL  = 'plugins.php?action=avail';
-		} else {
-			strURL  = 'plugins.php?action=list';
-		}
+	$uninstall_msg   = __esc('Uninstalling this Plugin and may remove all Plugin Data and Settings.  If you really want to Uninstall the Plugin, click \'Uninstall\' below.  Otherwise click \'Cancel\'.');
+	$uninstall_title = __esc('Are you sure you want to Uninstall?');
 
-		strURL += '&filter='+$('#filter').val();
-		strURL += '&rows='+$('#rows').val();
-		strURL += '&state='+$('#state').val();
-		loadUrl({url:strURL})
-	}
+	$rmdata_msg   = __esc('Removing Plugin Data and Settings for will remove all Plugin Data and Settings.  If you really want to Remove Data and Settings for this Plugin, click \'Remove Data\' below.  Otherwise click \'Cancel\'.');
+	$rmdata_title = __esc('Are you sure you want to Remove all Plugin Data and Settings?');
 
-	function clearFilter() {
-		strURL = 'plugins.php?action=list&clear=1';
-		loadUrl({url:strURL})
-	}
+	$resarchive_msg   = __esc('Restoring this Plugin Archive will overwrite the current Plugin directory.  If you really want to Restore this Plugin Archive, click \'Restore\' below.  Otherwise click \'Cancel\'.');
+	$resarchive_title = __esc('Are you sure you want to Restore this Archive?');
 
-	$(function() {
-		$('#refresh').click(function() {
-			applyFilter();
-		});
-
-		$('#clear').click(function() {
-			clearFilter();
-		});
-
-		$('#latest').click(function() {
-			strURL = 'plugins.php?action=latest';
-			loadUrl({url:strURL});
-		});
-
-		$('#form_plugins').submit(function(event) {
-			event.preventDefault();
-			applyFilter();
-		});
-	});
-	</script>
-	<?php
+	$rmarchive_msg   = __esc('Deleting this Plugin Archive is not reversable without a table restore.  If you really want to Delete the Plugin Archive, click \'Delete\' below.  Otherwise click \'Cancel\'.');
+	$rmarchive_title = __esc('Are you sure you want to Delete this Archive?');
 
 	html_start_box(__('Plugin Management'), '100%', '', '3', 'center', '');
 
 	?>
 	<tr class='even noprint'>
 		<td class='noprint'>
-		<form id='form_plugins' method='get' action='plugins.php'>
-			<table class='filterTable'>
-				<tr class='noprint'>
-					<td>
-						<?php print __('Search');?>
-					</td>
-					<td>
-						<input type='text' class='ui-state-default ui-corner-all' id='filter' size='25' value='<?php print html_escape_request_var('filter');?>'>
-					</td>
-					<td>
-						<?php print __('Status');?>
-					</td>
-					<td>
-						<select id='state' name='state' onChange='applyFilter()' data-defaultLabel='<?php print __('Status');?>'>
-							<option value='-99'<?php if (get_request_var('state') == '-99') {?> selected<?php }?>><?php print __('All Loaded on Disk');?></option>
-							<option value='1'<?php   if (get_request_var('state') == '1')   {?> selected<?php }?>><?php print __('Installed and Active');?></option>
-							<option value='4'<?php   if (get_request_var('state') == '4')   {?> selected<?php }?>><?php print __('Installed and Inactive');?></option>
-							<option value='5'<?php   if (get_request_var('state') == '5')   {?> selected<?php }?>><?php print __('Installed or Active');?></option>
-							<option value='2'<?php   if (get_request_var('state') == '2')   {?> selected<?php }?>><?php print __('Configuration Issues');?></option>
-							<option value='0'<?php   if (get_request_var('state') == '0')   {?> selected<?php }?>><?php print __('Not Installed');?></option>
-							<option value='7'<?php   if (get_request_var('state') == '7')   {?> selected<?php }?>><?php print __('Plugin Errors');?></option>
-							<option value='6'<?php   if (get_request_var('state') == '6')   {?> selected<?php }?>><?php print __('Available for Install');?></option>
-							<option value='8'<?php   if (get_request_var('state') == '8')   {?> selected<?php }?>><?php print __('Archived');?></option>
-						</select>
-					</td>
-					<td>
-						<?php print __('Plugins');?>
-					</td>
-					<td>
-						<select id='rows' name='rows' onChange='applyFilter()' data-defaultLabel='<?php print __('Plugins');?>'>
-							<option value='-1'<?php print(get_request_var('rows') == '-1' ? ' selected>':'>') . __('Default');?></option>
-							<?php
-							if (cacti_sizeof($item_rows) > 0) {
-								foreach ($item_rows as $key => $value) {
-									print "<option value='" . $key . "'" . (get_request_var('rows') == $key ? ' selected':'') . '>' . html_escape($value) . '</option>';
+			<form id='form_plugins' method='get' action='plugins.php'>
+				<table class='filterTable'>
+					<tr class='noprint'>
+						<td>
+							<?php print __('Search');?>
+						</td>
+						<td>
+							<input type='text' class='ui-state-default ui-corner-all' id='filter' size='25' value='<?php print html_escape_request_var('filter');?>'>
+						</td>
+						<td>
+							<?php print __('Status');?>
+						</td>
+						<td>
+							<select id='state' name='state' onChange='applyFilter()' data-defaultLabel='<?php print __('Status');?>'>
+								<option value='-99'<?php if (get_request_var('state') == '-99') {?> selected<?php }?>><?php print __('All Loaded on Disk');?></option>
+								<option value='1'<?php   if (get_request_var('state') == '1')   {?> selected<?php }?>><?php print __('Installed and Active');?></option>
+								<option value='4'<?php   if (get_request_var('state') == '4')   {?> selected<?php }?>><?php print __('Installed and Inactive');?></option>
+								<option value='5'<?php   if (get_request_var('state') == '5')   {?> selected<?php }?>><?php print __('Installed or Active');?></option>
+								<option value='2'<?php   if (get_request_var('state') == '2')   {?> selected<?php }?>><?php print __('Configuration Issues');?></option>
+								<option value='0'<?php   if (get_request_var('state') == '0')   {?> selected<?php }?>><?php print __('Not Installed');?></option>
+								<option value='7'<?php   if (get_request_var('state') == '7')   {?> selected<?php }?>><?php print __('Plugin Errors');?></option>
+								<option value='6'<?php   if (get_request_var('state') == '6')   {?> selected<?php }?>><?php print __('Available for Install');?></option>
+								<option value='8'<?php   if (get_request_var('state') == '8')   {?> selected<?php }?>><?php print __('Archived');?></option>
+							</select>
+						</td>
+						<td>
+							<?php print __('Plugins');?>
+						</td>
+						<td>
+							<select id='rows' name='rows' onChange='applyFilter()' data-defaultLabel='<?php print __('Plugins');?>'>
+								<option value='-1'<?php print(get_request_var('rows') == '-1' ? ' selected>':'>') . __('Default');?></option>
+								<?php
+								if (cacti_sizeof($item_rows) > 0) {
+									foreach ($item_rows as $key => $value) {
+										print "<option value='" . $key . "'" . (get_request_var('rows') == $key ? ' selected':'') . '>' . html_escape($value) . '</option>';
+									}
 								}
+								?>
+							</select>
+						</td>
+						<td>
+							<span>
+								<input type='button' class='ui-button ui-corner-all ui-widget' id='refresh' value='<?php print __esc('Go');?>' title='<?php print __esc('Set/Refresh Filters');?>'>
+								<input type='button' class='ui-button ui-corner-all ui-widget' id='clear' value='<?php print __esc('Clear');?>' title='<?php print __esc('Clear Filters');?>'>
+								<input type='button' class='ui-button ui-corner-all ui-widget' id='latest' value='<?php print __esc('Check Latest');?>' title='<?php print __esc('Fetch the list of the latest Cacti Plugins');?>'>
+							</span>
+						</td>
+					</tr>
+				</table>
+			</form>
+			<script type="text/javascript">
+			var url = '';
+
+			function applyFilter() {
+				if ($('#state').val() == 6) {
+				strURL  = 'plugins.php?action=avail';
+				} else {
+					strURL  = 'plugins.php?action=list';
+				}
+
+				strURL += '&filter='+$('#filter').val();
+				strURL += '&rows='+$('#rows').val();
+				strURL += '&state='+$('#state').val();
+				loadUrl({url:strURL})
+			}
+
+			function clearFilter() {
+				strURL = 'plugins.php?action=list&clear=1';
+				loadUrl({url:strURL})
+			}
+
+			function displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, height, width) {
+				if ($('#pidialog').dialog('instance')) {
+					$('#pidialog').dialog('close');
+				}
+
+				url = $(this).attr('href');
+
+				var btnButtons = {
+					'Cancel': {
+						text: buttonCancel,
+						id: 'btnCancel',
+						click: function() {
+							$(this).dialog('close');
+						}
+					},
+					'Continue': {
+						text: buttonContinue,
+						id: 'btnContinue',
+						click: function() {
+							$(this).dialog('close');
+							loadUrl({url: url});
+						}
+					}
+				};
+
+				var message = "<div id='pidialog' style='display:none;'><div>"+dialogMessage+"</div></div>";
+
+				if ($('#pidialog').length == 0) {
+					$('#main').append(message);
+				} else {
+					$('#pidialog').remove().append(message);
+				}
+
+				$('#pidialog').dialog({
+					title: dialogTitle,
+					minHeight: height,
+					minWidth: width,
+					buttons: btnButtons,
+					open: function() {
+						$('.ui-dialog-buttonpane > button:last').focus();
+						$('#pidialog').offset().top;
+					}
+				});
+			}
+
+			function displayFileDialog(dialogTitle, height, width) {
+				if ($('#pidialog').dialog('instance')) {
+					$('#pidialog').dialog('close');
+				}
+
+				var url = $(this).attr('href');
+
+				$.get(url, function(data) {
+					if (data != '') {
+						var message = "<div id='pidialog' style='display:none;'><div>"+DOMPurify.sanitize(data)+'</div></div>';
+
+						if ($('#pidialog').length == 0) {
+							$('#main').append(message);
+						} else {
+							$('#pidialog').remove().append(message);
+						}
+
+						$('#pidialog').dialog({
+							title: dialogTitle,
+							maxHeight: height,
+							minWidth: width,
+							open: function() {
+									$('.ui-dialog-buttonpane > button:last').focus();
+								$('#pidialog').offset().top;
 							}
-							?>
-						</select>
-					</td>
-					<td>
-						<span>
-							<input type='button' class='ui-button ui-corner-all ui-widget' id='refresh' value='<?php print __esc('Go');?>' title='<?php print __esc('Set/Refresh Filters');?>'>
-							<input type='button' class='ui-button ui-corner-all ui-widget' id='clear' value='<?php print __esc('Clear');?>' title='<?php print __esc('Clear Filters');?>'>
-							<input type='button' class='ui-button ui-corner-all ui-widget' id='latest' value='<?php print __esc('Check Latest');?>' title='<?php print __esc('Fetch the list of the latest Cacti Plugins');?>'>
-						</span>
-					</td>
-				</tr>
-			</table>
-		</form>
+						});
+					}
+				});
+			}
+
+			$(function() {
+				var sortColumn = '<?php print get_request_var('sort_column');?>';
+				var dndActive  = <?php print read_config_option('drag_and_drop') == 'on' ? 'true':'false';?>;
+				var tableState = <?php print get_request_var('state');?>
+
+				$('#refresh').click(function() {
+					applyFilter();
+				});
+
+				$('#clear').click(function() {
+					clearFilter();
+				});
+
+				$('#latest').click(function() {
+					strURL = 'plugins.php?action=latest';
+					loadUrl({url:strURL});
+				});
+
+				$('#form_plugins').submit(function(event) {
+					event.preventDefault();
+					applyFilter();
+				});
+
+				if (sortColumn == 'pi.id' && dndActive && tableState == -99) {
+					$('#plugins_list2_child').attr('id', 'dnd');
+
+					$('#dnd').tableDnD({
+						onDrag: function(table, row) {
+							console.log(table);
+							console.log(row);
+						},
+						onDrop: function(table, row) {
+							loadUrl({url:'plugins.php?action=ajax_dnd&'+$.tableDnD.serialize()})
+						}
+					});
+				}
+
+				$('.pirestore').off('click').on('click', function(event) {
+					event.preventDefault();
+
+					var dialogTitle    = '<?php print $resarchive_title;?>';
+					var dialogMessage  = '<?php print $resarchive_msg;?>';
+					var buttonContinue = '<?php print __('Restore Archive');?>';
+					var buttonCancel   = '<?php print __('Cancel');?>';
+
+					displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
+				});
+
+				$('.pirmarchive').off('click').on('click', function(event) {
+					event.preventDefault();
+
+					var dialogTitle    = '<?php print $rmarchive_title;?>';
+					var dialogMessage  = '<?php print $rmarchive_msg;?>';
+					var buttonContinue = '<?php print __('Delete Archive');?>';
+					var buttonCancel   = '<?php print __('Cancel');?>';
+
+					displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
+				});
+
+				$('.pirmdata').off('click').on('click', function(event) {
+					event.preventDefault();
+
+					var dialogTitle    = '<?php print $rmdata_title;?>';
+					var dialogMessage  = '<?php print $rmdata_msg;?>';
+					var buttonContinue = '<?php print __('Remove Data');?>';
+					var buttonCancel   = '<?php print __('Cancel');?>';
+
+					displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
+				});
+
+				$('.piuninstall').off('click').on('click', function(event) {
+					event.preventDefault();
+
+					var dialogTitle    = '<?php print $uninstall_title;?>';
+					var dialogMessage  = '<?php print $uninstall_msg;?>';
+					var buttonContinue = '<?php print __('Uninstall');?>';
+					var buttonCancel   = '<?php print __('Cancel');?>';
+
+					displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
+				});
+
+				$('.pireadme').off('click').on('click', function(event) {
+					event.preventDefault();
+
+					var dialogTitle = '<?php print __esc('Plugin Reame File');?>';
+
+					displayFileDialog(dialogTitle, 400, 600);
+				});
+
+				$('.pichangelog').off('click').on('click', function(event) {
+					event.preventDefault();
+
+					var dialogTitle = '<?php print __esc('Plugin ChangeLog File');?>';
+
+					displayFileDialog(dialogTitle, 400, 600);
+				});
+			});
+			</script>
 		</td>
 	</tr>
 	<?php
@@ -1326,13 +1551,13 @@ function update_show_current() {
 				$last_plugin = false;
 			}
 
-			if ($plugin['status'] <= 0 || (get_request_var('sort_column') != 'id')) {
+			if ($plugin['status'] <= 0 || (get_request_var('sort_column') != 'pi.id')) {
 				$load_ordering = false;
 			} else {
 				$load_ordering = true;
 			}
 
-			form_alternate_row('', true);
+			print "<tr id='line{$plugin['id']}' class='tableRow selectable" . ($plugin['status'] <= 0 ? ' nodrag':'') . "'>";
 
 			switch(get_request_var('state')) {
 				case 8:
@@ -1350,6 +1575,8 @@ function update_show_current() {
 					break;
 			}
 
+			form_end_row();
+
 			$i++;
 
 			$j++;
@@ -1366,284 +1593,13 @@ function update_show_current() {
 
 	form_end();
 
-	$uninstall_msg   = __('Uninstalling this Plugin and may remove all Plugin Data and Settings.  If you really want to Uninstall the Plugin, click \'Uninstall\' below.  Otherwise click \'Cancel\'.');
-	$uninstall_title = __('Are you sure you want to Uninstall?');
-
-	$rmdata_msg   = __('Removing Plugin Data and Settings for will remove all Plugin Data and Settings.  If you really want to Remove Data and Settings for this Plugin, click \'Remove Data\' below.  Otherwise click \'Cancel\'.');
-	$rmdata_title = __('Are you sure you want to Remove all Plugin Data and Settings?');
-
-	$resarchive_msg   = __('Restoring this Plugin Archive will overwrite the current Plugin directory.  If you really want to Restore this Plugin Archive, click \'Restore\' below.  Otherwise click \'Cancel\'.');
-	$resarchive_title = __('Are you sure you want to Restore this Archive?');
-
-	$rmarchive_msg   = __('Deleting this Plugin Archive is not reversable without a table restore.  If you really want to Delete the Plugin Archive, click \'Delete\' below.  Otherwise click \'Cancel\'.');
-	$rmarchive_title = __('Are you sure you want to Delete this Archive?');
-
-	?>
-	<script type='text/javascript'>
-	var url = '';
-
-	$(function() {
-		$('.pirestore').off('click').on('click', function(event) {
-			event.preventDefault();
-
-			if ($('#pidialog').dialog('instance')) {
-				$('#pidialog').dialog('close');
-			}
-
-			url = $(this).attr('href');
-
-			var btnResArchive = {
-				'Cancel': {
-					text: '<?php print __('Cancel');?>',
-					id: 'btnCancel',
-					click: function() {
-						$(this).dialog('close');
-					}
-				},
-				'ResArchive': {
-					text: '<?php print __('Restore Archive');?>',
-					id: 'btnResArchive',
-					click: function() {
-						$(this).dialog('close');
-						loadUrl({url: url});
-					}
-				}
-			};
-
-			var message = "<div id='pidialog' style='display:none;'><div><?php print $resarchive_msg;?></div></div>";
-
-			if ($('#pidialog').length == 0) {
-				$('#main').append(message);
-			} else {
-				$('#pidialog').remove().append(message);
-			}
-
-			$('#pidialog').dialog({
-				title: '<?php print $resarchive_title;?>',
-				minHeight: 80,
-				minWidth: 800,
-				buttons: btnResArchive,
-				open: function() {
-					$('.ui-dialog-buttonpane > button:last').focus();
-					$('#pidialog').offset().top;
-				}
-			});
-		});
-
-		$('.pirmarchive').off('click').on('click', function(event) {
-			event.preventDefault();
-
-			if ($('#pidialog').dialog('instance')) {
-				$('#pidialog').dialog('close');
-			}
-
-			url = $(this).attr('href');
-
-			var btnRmArchive = {
-				'Cancel': {
-					text: '<?php print __('Cancel');?>',
-					id: 'btnCancel',
-					click: function() {
-						$(this).dialog('close');
-					}
-				},
-				'RmArchive': {
-					text: '<?php print __('Delete Archive');?>',
-					id: 'btnDelArchive',
-					click: function() {
-						$(this).dialog('close');
-						loadUrl({url: url});
-					}
-				}
-			};
-
-			var message = "<div id='pidialog' style='display:none;'><div><?php print $rmarchive_msg;?></div></div>";
-
-			if ($('#pidialog').length == 0) {
-				$('#main').append(message);
-			} else {
-				$('#pidialog').remove().append(message);
-			}
-
-			$('#pidialog').dialog({
-				title: '<?php print $rmarchive_title;?>',
-				minHeight: 80,
-				minWidth: 800,
-				buttons: btnRmArchive,
-				open: function() {
-					$('.ui-dialog-buttonpane > button:last').focus();
-					$('#pidialog').offset().top;
-				}
-			});
-		});
-
-		$('.pirmdata').off('click').on('click', function(event) {
-			event.preventDefault();
-
-			if ($('#pidialog').dialog('instance')) {
-				$('#pidialog').dialog('close');
-			}
-
-			url = $(this).attr('href');
-
-			var btnRmData = {
-				'Cancel': {
-					text: '<?php print __('Cancel');?>',
-					id: 'btnCancel',
-					click: function() {
-						$(this).dialog('close');
-					}
-				},
-				'RmData': {
-					text: '<?php print __('Remove Data');?>',
-					id: 'btnUninstall',
-					click: function() {
-						$(this).dialog('close');
-						loadUrl({url: url});
-					}
-				}
-			};
-
-			var message = "<div id='pidialog' style='display:none;'><div><?php print $rmdata_msg;?></div></div>";
-
-			if ($('#pidialog').length == 0) {
-				$('#main').append(message);
-			} else {
-				$('#pidialog').remove().append(message);
-			}
-
-			$('#pidialog').dialog({
-				title: '<?php print $rmdata_title;?>',
-				minHeight: 80,
-				minWidth: 800,
-				buttons: btnRmData,
-				open: function() {
-					$('.ui-dialog-buttonpane > button:last').focus();
-					$('#pidialog').offset().top;
-				}
-			});
-		});
-
-		$('.piuninstall').off('click').on('click', function(event) {
-			event.preventDefault();
-
-			if ($('#pidialog').dialog('instance')) {
-				$('#pidialog').dialog('close');
-			}
-
-			url = $(this).attr('href');
-
-			var btnUninstall = {
-				'Cancel': {
-					text: '<?php print __('Cancel');?>',
-					id: 'btnCancel',
-					click: function() {
-						$(this).dialog('close');
-					}
-				},
-				'Uninstall': {
-					text: '<?php print __('Uninstall');?>',
-					id: 'btnUninstall',
-					click: function() {
-						$(this).dialog('close');
-						loadUrl({url: url});
-					}
-				}
-			};
-
-			var message = "<div id='pidialog' style='display:none;'><div><?php print $uninstall_msg;?></div></div>";
-
-			if ($('#pidialog').length == 0) {
-				$('#main').append(message);
-			} else {
-				$('#pidialog').remove().append(message);
-			}
-
-			$('#pidialog').dialog({
-				title: '<?php print $uninstall_title;?>',
-				minHeight: 80,
-				minWidth: 800,
-				buttons: btnUninstall,
-				open: function() {
-					$('.ui-dialog-buttonpane > button:last').focus();
-					$('#pidialog').offset().top;
-				}
-			});
-		});
-
-		$('.pireadme').off('click').on('click', function(event) {
-			event.preventDefault();
-
-			if ($('#pidialog').dialog('instance')) {
-				$('#pidialog').dialog('close');
-			}
-
-			var url = $(this).attr('href');
-
-			$.get(url, function(data) {
-				if (data != '') {
-					var message = "<div id='pidialog' style='display:none;'><div>"+DOMPurify.sanitize(data)+'</div></div>';
-
-					if ($('#pidialog').length == 0) {
-						$('#main').append(message);
-					} else {
-						$('#pidialog').remove().append(message);
-					}
-
-					$('#pidialog').dialog({
-						title: '<?php print __esc('Plugin Readme File');?>',
-						maxHeight: 400,
-						minWidth: 800,
-						open: function() {
-							$('.ui-dialog-buttonpane > button:last').focus();
-							$('#pidialog').offset().top;
-						}
-					});
-				}
-			});
-		});
-
-		$('.pichangelog').off('click').on('click', function(event) {
-			event.preventDefault();
-
-			if ($('#pidialog').dialog('instance')) {
-				$('#pidialog').dialog('close');
-			}
-
-			var url = $(this).attr('href');
-
-			$.get(url, function(data) {
-				if (data != '') {
-					var message = "<div id='pidialog' style='display:none;'><div>"+DOMPurify.sanitize(data)+'</div></div>';
-
-					if ($('#pidialog').length == 0) {
-						$('#main').append(message);
-					} else {
-						$('#pidialog').remove().append(message);
-					}
-
-					$('#pidialog').dialog({
-						title: '<?php print __esc('Plugin ChangeLog File');?>',
-						maxHeight: 400,
-						minWidth: 800,
-						open: function() {
-							$('.ui-dialog-buttonpane > button:last').focus();
-							$('#pidialog').offset().top;
-						}
-					});
-				}
-			});
-		});
-	});
-	</script>
-	<?php
-
 	db_execute("DROP TABLE $table");
 }
 
 function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 	global $status_names, $config;
 	static $first_plugin = true;
+	static $row_id = 1;
 
 	$row = plugin_actions($plugin, $table);
 
@@ -1659,7 +1615,7 @@ function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 	$row .= "<td class='nowrap'>" . filter_value($plugin['description'], get_request_var('filter')) . '</td>';
 
 	if ($plugin['status'] == '-1') {
-		$status = plugin_is_compatible($plugin['directory']);
+		$status = plugin_is_compatible($plugin['plugin']);
 		$row .= "<td class='nowrap'>" . __('Not Compatible, \'%s\'', $status['requires']);
 	} elseif ($plugin['status'] < -1) {
 		$row .= "<td class='nowrap'>" . __('Plugin Error');
@@ -1670,7 +1626,7 @@ function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 	if ($config['poller_id'] > 1) {
 		if (strpos($plugin['capabilities'], 'remote_collect:1') !== false || strpos($plugin['capabilities'], 'remote_poller:1') !== false) {
 			if ($plugin['remote_status'] == '-1') {
-				$status = plugin_is_compatible($plugin['directory']);
+				$status = plugin_is_compatible($plugin['plugin']);
 				$row .= ' / ' . __('Not Compatible, \'%s\'', $status['requires']);
 			} elseif ($plugin['remote_status'] < -1) {
 				$row .= ' / ' . __('Plugin Error');
@@ -1711,13 +1667,13 @@ function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 		$row .= "<td class='nowrap right'>";
 
 		if (!$first_plugin) {
-			$row .= "<a class='pic fa fa-caret-up moveArrow' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=moveup&plugin=' . $plugin['directory']) . "' title='" . __esc('Order Before Previous Plugin') . "'></a>";
+			$row .= "<a class='pic fa fa-caret-up moveArrow' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=moveup&plugin=' . $plugin['plugin']) . "' title='" . __esc('Order Before Previous Plugin') . "'></a>";
 		} else {
 			$row .= '<span class="moveArrowNone"></span>';
 		}
 
 		if (!$last_plugin) {
-			$row .= "<a class='pic fa fa-caret-down moveArrow' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=movedown&plugin=' . $plugin['directory']) . "' title='" . __esc('Order After Next Plugin') . "'></a>";
+			$row .= "<a class='pic fa fa-caret-down moveArrow' href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=movedown&plugin=' . $plugin['plugin']) . "' title='" . __esc('Order After Next Plugin') . "'></a>";
 		} else {
 			$row .= '<span class="moveArrowNone"></span>';
 		}
@@ -1726,11 +1682,11 @@ function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 		$row .= "<td></td>";
 	}
 
-	$row .= "</tr>";
-
 	if ($include_ordering) {
 		$first_plugin = false;
 	}
+
+	$row_id++;
 
 	return $row;
 }
