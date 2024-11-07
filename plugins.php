@@ -975,12 +975,10 @@ function update_show_current() {
 				loadUrl({url:strURL})
 			}
 
-			function displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, height, width) {
+			function displayDialog(url, dialogTitle, dialogMessage, buttonContinue, buttonCancel, height, width) {
 				if ($('#pidialog').dialog('instance')) {
 					$('#pidialog').dialog('close');
 				}
-
-				url = $(this).attr('href');
 
 				var btnButtons = {
 					'Cancel': {
@@ -1020,12 +1018,10 @@ function update_show_current() {
 				});
 			}
 
-			function displayFileDialog(dialogTitle, height, width) {
+			function displayFileDialog(url, dialogTitle, height, width) {
 				if ($('#pidialog').dialog('instance')) {
 					$('#pidialog').dialog('close');
 				}
-
-				var url = $(this).attr('href');
 
 				$.get(url, function(data) {
 					if (data != '') {
@@ -1094,8 +1090,9 @@ function update_show_current() {
 					var dialogMessage  = '<?php print $resarchive_msg;?>';
 					var buttonContinue = '<?php print __('Restore Archive');?>';
 					var buttonCancel   = '<?php print __('Cancel');?>';
+					var url            = $(this).attr('href');
 
-					displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
+					displayDialog(url, dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
 				});
 
 				$('.pirmarchive').off('click').on('click', function(event) {
@@ -1105,8 +1102,9 @@ function update_show_current() {
 					var dialogMessage  = '<?php print $rmarchive_msg;?>';
 					var buttonContinue = '<?php print __('Delete Archive');?>';
 					var buttonCancel   = '<?php print __('Cancel');?>';
+					var url            = $(this).attr('href');
 
-					displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
+					displayDialog(url, dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
 				});
 
 				$('.pirmdata').off('click').on('click', function(event) {
@@ -1116,8 +1114,9 @@ function update_show_current() {
 					var dialogMessage  = '<?php print $rmdata_msg;?>';
 					var buttonContinue = '<?php print __('Remove Data');?>';
 					var buttonCancel   = '<?php print __('Cancel');?>';
+					var url            = $(this).attr('href');
 
-					displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
+					displayDialog(url, dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
 				});
 
 				$('.piuninstall').off('click').on('click', function(event) {
@@ -1127,24 +1126,27 @@ function update_show_current() {
 					var dialogMessage  = '<?php print $uninstall_msg;?>';
 					var buttonContinue = '<?php print __('Uninstall');?>';
 					var buttonCancel   = '<?php print __('Cancel');?>';
+					var url            = $(this).attr('href');
 
-					displayDialog(dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
+					displayDialog(url, dialogTitle, dialogMessage, buttonContinue, buttonCancel, 80, 400);
 				});
 
 				$('.pireadme').off('click').on('click', function(event) {
 					event.preventDefault();
 
 					var dialogTitle = '<?php print __esc('Plugin Reame File');?>';
+					var url         = $(this).attr('href');
 
-					displayFileDialog(dialogTitle, 400, 600);
+					displayFileDialog(url, dialogTitle, 400, 700);
 				});
 
 				$('.pichangelog').off('click').on('click', function(event) {
 					event.preventDefault();
 
 					var dialogTitle = '<?php print __esc('Plugin ChangeLog File');?>';
+					var url         = $(this).attr('href');
 
-					displayFileDialog(dialogTitle, 400, 600);
+					displayFileDialog(url, dialogTitle, 400, 700);
 				});
 			});
 			</script>
@@ -1301,7 +1303,7 @@ function update_show_current() {
 			break;
 		case 0:
 		case 6:
-			$sql = "SELECT pi.plugin, pi.status, pi.remote_status,
+			$sql = "SELECT pi.id, pi.plugin, pi.status, pi.remote_status,
 				pi.author, pi.webpage, pi.version, pi.capabilities, pi.requires, pi.last_updated,
 				pa.plugin, pa.description AS avail_description,
 				pa.author AS avail_author, pa.webpage AS avail_webpage,
