@@ -3336,7 +3336,10 @@ function setSelectMenus() {
 			});
 
 			if (typeof(attr['data-defaultLabel']) !== 'undefined') {
-				$(ul).parent().prepend('<div class="mdw-selectmenu-search"><input style="width:100%" type="search" class="ui-state-default ui-corner-all" data-scope="theme" placeholder="' + searchPlaceholder + '"></div>');
+
+				if(this.menuWrap.find('input').length === 0) {
+					this.menuWrap.prepend('<div class="ui-selectmenu-search"><input type="search" class="ui-state-default ui-corner-all" data-scope="theme" placeholder="' + searchPlaceholder + '"></div>');
+				}
 
 				this._on(false, this.menuWrap.find('input'), {
 					'keydown': function (event) {
@@ -4108,11 +4111,10 @@ function finalizeGraphRedraw(options, data) {
 			data.graph_top = parseInt(data.graph_top * ratio);
 			data.graph_left = parseInt(data.graph_left * ratio);
 		}
-		let raw_data_compressed = (data.raw !== undefined) ? lzjs.compressToBase64(JSON.stringify(data.raw)) : '';
+
 		$('#wrapper_' + data.local_graph_id).empty().html(
 			"<img class='graphimage' id='graph_" + data.local_graph_id + "'" +
 			" src='data:image/" + data.type + ";base64," + data.image + "'" +
-			" data-raw='" + raw_data_compressed + "'" +
 			" rra_id='" + data.rra_id + "'" +
 			" graph_type='" + data.type + "'" +
 			" graph_id='" + data.local_graph_id + "'" +
@@ -4268,7 +4270,12 @@ function initializeGraphs(disable_cache) {
 				if (rra_id > 0) {
 					wrapper_id += '[rra_id=\'' + data.rra_id + '\']';
 				}
-				let raw_data_compressed = (data.raw !== undefined) ? lzjs.compressToBase64(JSON.stringify(data.raw)) : '';
+
+				let raw_data_compressed = {};
+				if(data.data !== undefined) raw_data_compressed.data = data.data;
+				if(data.meta !== undefined) raw_data_compressed.legend = data.meta.legend;
+				raw_data_compressed = lzjs.compressToBase64(JSON.stringify(raw_data_compressed));
+
 				$(wrapper_id).empty().html(
 					"<img class='graphimage' id='graph_" + data.local_graph_id + "'" +
 					" src='data:image/" + data.type + ";base64," + data.image + "'" +
