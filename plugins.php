@@ -1201,6 +1201,9 @@ function update_show_current() {
 	switch (get_request_var('state')) {
 		case 6:
 			/* show all matching plugins */
+			if (read_config_option('github_allow_unsafe') != 'on') {
+				$sql_where .= ($sql_where != '' ? ' AND ':'WHERE ') . ' pa.tag_name != "develop"';
+			}
 
 			break;
 		case 8:

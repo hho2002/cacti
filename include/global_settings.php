@@ -592,6 +592,12 @@ $settings['general'] = array(
 		'size'          => '100',
 		'max_length'    => '255',
 	),
+	'github_allow_unsafe' => array(
+		'friendly_name' => __('Enable Unsafe Plugin Installs'),
+		'description'   => __('If you would like to allow the installation of Cacti Plugins from their \'develop\' branch, check this checkbox.'),
+		'method'        => 'checkbox',
+		'default'       => '',
+	),
 	'security_header' => array(
 		'friendly_name' => __('Site Security'),
 		'method'        => 'spacer',
