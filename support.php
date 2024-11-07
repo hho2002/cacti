@@ -828,7 +828,7 @@ function show_cacti_poller() {
 		ORDER BY polling_time DESC
 		LIMIT 20");
 
-	html_section_header(__('Worst 20 polling time hosts'), 2);
+	html_section_header(__('Worst 20 Polling Time Devices'), 2);
 
 	form_alternate_row();
 
@@ -841,7 +841,7 @@ function show_cacti_poller() {
 		print "  <th class='tableSubHeaderColumn'>"       . __('Description')         . '</th>';
 		print "  <th class='tableSubHeaderColumn right'>" . __('ID')                  . '</th>';
 		print "  <th class='tableSubHeaderColumn right'>" . __('Avg Polling Time')    . '</th>';
-		print "  <th class='tableSubHeaderColumn right'>" . __('Actual polling time') . '</th>';
+		print "  <th class='tableSubHeaderColumn right'>" . __('Actual Polling Time') . '</th>';
 		print '</tr>';
 		print '</thead>';
 
@@ -965,8 +965,10 @@ function show_cacti_changelog() {
 	$changelog = file(CACTI_PATH_BASE . '/CHANGELOG');
 
 	foreach ($changelog as $s) {
-		if (strlen(trim($s)) && stripos($s, 'CHANGELOG') === false) {
-			if (strpos($s, '-') === false) {
+		if (trim($s) == '') {
+			continue;
+		} elseif (strlen(trim($s)) && stripos($s, 'CHANGELOG') === false) {
+			if (strpos($s, '-') === false || strpos($s, '-dev') !== false) {
 				html_section_header(__('Version %s', $s), 2);
 			} else {
 				form_alternate_row();
