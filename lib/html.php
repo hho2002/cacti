@@ -1612,7 +1612,7 @@ function draw_menu($user_menu = '') {
 		$user_menu = $menu;
 	}
 
-	print "<tr><td><table width='100%'><tr><td><div id='menu'><ul id='nav' role='menu'>";
+	print "<div id='menu'><ul id='nav' role='menu'>";
 
 	/* loop through each header */
 	$i       = 0;
@@ -1752,7 +1752,7 @@ function draw_menu($user_menu = '') {
 		}
 	}
 
-	print '</ul></div></td></tr></table></td></tr>';
+	print '</ul></div>';
 }
 
 /**

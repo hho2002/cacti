@@ -52,14 +52,8 @@ if (!$is_request_ajax) {?>
 <?php } ?>
 	<div id='cactiContent' class='cactiContent'>
 		<div class='cactiConsoleNavigationArea' style='display:none;' id='navigation'>
-			<table style='width:100%;'>
-				<?php draw_menu();?>
-				<tr>
-					<td style='text-align:center;'>
-						<div class='cactiLogo' onclick='loadUrl({url:"<?php print CACTI_PATH_URL;?>about.php"})'></div>
-					</td>
-				</tr>
-			</table>
+			<?php draw_menu();?>
+			<div class='cactiLogo' onclick='loadUrl({url:"<?php print CACTI_PATH_URL;?>about.php"})'></div>
 		</div>
 		<div id='navigation_right' class='cactiConsoleContentArea'>
 			<main id='main'>
