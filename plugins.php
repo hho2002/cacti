@@ -1443,13 +1443,13 @@ function update_show_current() {
 					'tip'     => __('The author of this Plugin.')
 				),
 				'nosort1' => array(
-					'display' => __('Min Cacti Release'),
+					'display' => __('Cacti Releases'),
 					'align'   => 'left',
 					'sort'    => 'ASC',
-					'tip'     => __('This Version of the Plugin requires the following Cacti Release or higher.')
+					'tip'     => __('The Cacti Releases that are eligible to use this Plugin.  The format of the allowed versions follows common naming.')
 				),
 				'version' => array(
-					'display' => __('Current Version'),
+					'display' => __('Installed Version'),
 					'align'   => 'right',
 					'sort'    => 'ASC',
 					'tip'     => __('The currently installed version of this Plugin.')
