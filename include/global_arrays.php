@@ -986,7 +986,8 @@ $rrdtool_versions = array(
 	'1.7.0' => 'RRDtool 1.7+',
 	'1.7.1' => 'RRDtool 1.7.1+',
 	'1.7.2' => 'RRDtool 1.7.2+',
-	'1.8.0' => 'RRDtool 1.8+'
+	'1.8.0' => 'RRDtool 1.8+',
+	'1.9.0' => 'RRDtool 1.9+'
 );
 
 $i18n_modes = array(

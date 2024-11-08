@@ -24,6 +24,7 @@ Cacti CHANGELOG
 -issue#5844: Automation fails when using MySQL 8
 -issue#5885: Fix Fortigate and Aruba OSCX switch template, improve Clearpass template
 -issue#5899: Tooltip remain on page after page is refreshed
+-issue#5900: Please add the ability to select compiled RRDtool v1.9+
 -feature#412: Import Export for Graph and Tree rules
 -feature#1214: Move Tree Create/Remove/Modify Functions to lib/api_tree.php
 -feature#1442: Add validation to GUI inputs
