@@ -42,8 +42,4 @@ if (!clog_admin()) {
 
 load_current_session_value('page_referrer', 'page_referrer', '');
 
-general_header();
-
 clog_view_logfile();
-
-bottom_footer();
