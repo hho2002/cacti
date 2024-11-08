@@ -491,7 +491,7 @@ function api_plugin_archive_restore($plugin, $id, $type = 'archive') {
 				}
 			}
 
-			/* get the list of files in the current plugin direcotory */
+			/* get the list of files in the current plugin directory */
 			$dir_iterator = new RecursiveDirectoryIterator($restore_path);
 			$iterator     = new RecursiveIteratorIterator($dir_iterator, RecursiveIteratorIterator::SELF_FIRST);
 
@@ -896,7 +896,7 @@ function update_show_current() {
 	$resarchive_msg   = __esc('Restoring this Plugin Archive will overwrite the current Plugin directory.  If you really want to Restore this Plugin Archive, click \'Restore\' below.  Otherwise click \'Cancel\'.');
 	$resarchive_title = __esc('Are you sure you want to Restore this Archive?');
 
-	$rmarchive_msg   = __esc('Deleting this Plugin Archive is not reversable without a table restore.  If you really want to Delete the Plugin Archive, click \'Delete\' below.  Otherwise click \'Cancel\'.');
+	$rmarchive_msg   = __esc('Deleting this Plugin Archive is not reversible without a table restore.  If you really want to Delete the Plugin Archive, click \'Delete\' below.  Otherwise click \'Cancel\'.');
 	$rmarchive_title = __esc('Are you sure you want to Delete this Archive?');
 
 	html_start_box(__('Plugin Management'), '100%', '', '3', 'center', '');
@@ -2446,7 +2446,7 @@ function plugins_fetch_latest_plugins() {
 	$updated_plugins = $updated;
 
 	if (cacti_sizeof($avail_plugins)) {
-		raise_message('plugins_fetched', __('There were \'%s\' Plugins found at The Cacti Groups GitHub site and \'%s\' Plugins Tags/Releases were retreived and updated in %0.2f seconds.', $total_plugins, $updated_plugins, $end - $start), MESSAGE_LEVEL_INFO);
+		raise_message('plugins_fetched', __('There were \'%s\' Plugins found at The Cacti Groups GitHub site and \'%s\' Plugins Tags/Releases were retrieved and updated in %0.2f seconds.', $total_plugins, $updated_plugins, $end - $start), MESSAGE_LEVEL_INFO);
 	} else {
 		raise_message('plugins_fetched', __('Unable to reach The Cacti Groups GitHub site.  No plugin data retrieved in %0.2f seconds.', $end-$start), MESSAGE_LEVEL_WARN);
 	}
