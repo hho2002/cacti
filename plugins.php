@@ -863,6 +863,11 @@ function update_show_current() {
 			'filter'  => FILTER_VALIDATE_INT,
 			'default' => '1'
 		),
+		'type' => array(
+			'filter'  => FILTER_VALIDATE_INT,
+			'pageset' => true,
+			'default' => '-1'
+		),
 		'filter' => array(
 			'filter'  => FILTER_DEFAULT,
 			'pageset' => true,
@@ -932,6 +937,20 @@ function update_show_current() {
 								<option value='8'<?php   if (get_request_var('state') == '8')   {?> selected<?php }?>><?php print __('Archived');?></option>
 							</select>
 						</td>
+						<?php if (get_request_var('state') == 6 && read_config_option('github_allow_unsafe', true) == 'on') { ?>
+						<td>
+							<?php print __('Tag Type');?>
+						</td>
+						<td>
+							<select id='type' name='type' onChange='applyFilter()' data-defaultLabel='<?php print __('All');?>'>
+								<option value='-1'<?php if (get_request_var('type') == '-1') {?> selected<?php }?>><?php print __('All');?></option>
+								<option value='1'<?php  if (get_request_var('type') == '1')  {?> selected<?php }?>><?php print __('Non Develop');?></option>
+								<option value='2'<?php  if (get_request_var('type') == '2')  {?> selected<?php }?>><?php print __('Develop');?></option>
+							</select>
+						</td>
+						<?php } else { ?>
+						<td><input type='hidden' id='type' value='-1'></td>
+						<?php } ?>
 						<td>
 							<?php print __('Plugins');?>
 						</td>
@@ -962,12 +981,13 @@ function update_show_current() {
 
 			function applyFilter() {
 				if ($('#state').val() == 6) {
-				strURL  = 'plugins.php?action=avail';
+					strURL = 'plugins.php?action=avail';
 				} else {
-					strURL  = 'plugins.php?action=list';
+					strURL = 'plugins.php?action=list';
 				}
 
 				strURL += '&filter='+$('#filter').val();
+				strURL += '&type='+$('#type').val();
 				strURL += '&rows='+$('#rows').val();
 				strURL += '&state='+$('#state').val();
 				loadUrl({url:strURL})
@@ -1206,8 +1226,14 @@ function update_show_current() {
 	switch (get_request_var('state')) {
 		case 6:
 			/* show all matching plugins */
-			if (read_config_option('github_allow_unsafe') != 'on') {
+			if (read_config_option('github_allow_unsafe') == '') {
 				$sql_where .= ($sql_where != '' ? ' AND ':'WHERE ') . ' pa.tag_name != "develop"';
+			} else {
+				if (get_request_var('type') == '1') {
+					$sql_where .= ($sql_where != '' ? ' AND ':'WHERE ') . ' pa.tag_name != "develop"';
+				} elseif (get_request_var('type') == '2') {
+					$sql_where .= ($sql_where != '' ? ' AND ':'WHERE ') . ' pa.tag_name = "develop"';
+				}
 			}
 
 			break;
