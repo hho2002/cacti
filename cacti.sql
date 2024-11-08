@@ -2161,11 +2161,32 @@ CREATE TABLE host_template_snmp_query (
 --
 
 --
+-- Table structure for table `plugin_archive`
+--
+
+CREATE TABLE `plugin_archive` (
+  `id` mediumint(8) unsigned NOT NULL AUTO_INCREMENT,
+  `plugin` varchar(32) NOT NULL DEFAULT '',
+  `description` varchar(64) NOT NULL DEFAULT '',
+  `author` varchar(64) NOT NULL DEFAULT '',
+  `webpage` varchar(255) NOT NULL DEFAULT '',
+  `user_id` int(10) unsigned NOT NULL DEFAULT 0,
+  `version` varchar(10) NOT NULL DEFAULT '',
+  `requires` varchar(128) DEFAULT '',
+  `compat` varchar(20) NOT NULL DEFAULT '',
+  `dir_md5sum` varchar(32) NOT NULL DEFAULT '',
+  `last_updated` timestamp NULL DEFAULT NULL,
+  `archive` longblob DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `directory` (`plugin`)
+) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+
+--
 -- Table structure for table `plugin_available`
 --
 
 CREATE TABLE `plugin_available` (
-  `infoname` varchar(20) NOT NULL DEFAULT '',
+  `plugin` varchar(32) NOT NULL DEFAULT '',
   `description` varchar(128) NOT NULL DEFAULT '',
   `author` varchar(40) NOT NULL DEFAULT '',
   `webpage` varchar(128) NOT NULL DEFAULT '',
@@ -2179,7 +2200,7 @@ CREATE TABLE `plugin_available` (
   `changelog` blob DEFAULT NULL,
   `archive` longblob DEFAULT NULL,
   `last_updated` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`infoname`,`tag_name`)
+  PRIMARY KEY (`plugin`,`tag_name`)
 ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
 
 --
