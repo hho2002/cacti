@@ -1155,6 +1155,10 @@ legend {
 	display: inline-block;
 }
 
+.piinstall, .pienable, .pidisable, .piuninstall, .pierror, .pirmdata {
+	padding: 0px 3px !important;
+}
+
 .noLinkEditMain {
 	color: rgba(44,130,29,1);
 	text-decoration: none;
@@ -1162,10 +1166,6 @@ legend {
 	font-weight: normal;
 	padding: 3px;
 	white-space: nowrap;
-}
-
-.piinstall, .pienable, .pidisable, .piuninstall, .pierror {
-	padding: 0px 3px !important;
 }
 
 .linkEditMain, .linkEditMain:visited, .linkEditMain:active {

@@ -985,6 +985,10 @@ legend {
 	padding-bottom: 2px;
 }
 
+.piinstall, .pienable, .pidisable, .piuninstall, .pierror, .pirmdata {
+	padding: 0px 3px !important;
+}
+
 .linkEditMain, .linkEditMain:visited, .linkEditMain:active {
 	color: #a84ca8;
 	text-decoration: none;

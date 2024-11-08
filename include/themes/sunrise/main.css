@@ -1193,7 +1193,7 @@ legend {
 	display: inline-block;
 }
 
-.piinstall, .pienable, .pidisable, .piuninstall, .pierror {
+.piinstall, .pienable, .pidisable, .piuninstall, .pierror, .pirmdata {
 	padding: 0px 3px !important;
 }
 
