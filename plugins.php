@@ -2024,7 +2024,7 @@ function plugin_get_install_links($plugin, $table) {
 			$rm_data_function  = "plugin_{$plugin['plugin']}_remove_data";
 
 			if (function_exists($has_data_function) && function_exists($rm_data_function) && $has_data_function()) {
-				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=remove_data&plugin=' . $plugin['plugin']) . "' title='" . __esc('Remove Plugin Data Tables and Settings') . "' class='pirmdata'><i class='fa fa-trash deviceDisabled'></i></a>";
+				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=remove_data&plugin=' . $plugin['plugin']) . "' title='" . __esc('Remove Plugin Data Tables and Settings') . "' class='pirmdata'><i class='fa fa-trash deviceDown'></i></a>";
 			}
 		}
 	}
