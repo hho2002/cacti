@@ -2239,7 +2239,7 @@ function menuShow() {
 			$('#navigation').hide();
 			return;
 		}
-	} else if (pageName == 'index.php') {
+	} else if ($('#menu').length > 0) {
 		marginLeftConsole = $('#navigation').width();
 	}
 
@@ -2263,6 +2263,8 @@ function menuShow() {
 		if (marginLeftConsole > 0) {
 			$('#navigation_right').animate({ 'margin-left': marginLeftConsole }, 20);
 		}
+
+		$('#navigation').show();
 	}
 
 	if (myClass != '') {
