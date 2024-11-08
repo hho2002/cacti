@@ -155,15 +155,18 @@ if (isset_request_var('plugin')) {
 		'install',
 		'confirm',
 		'delete',
-		'ajax_dnd'
+		'ajax_dnd',
+		'remove_data'
 	);
 
+	$display_action = ucwords(str_replace('_', ' ', $action));
+
 	if (!in_array($plugin, $pluginslist, true) && !in_array($action, $safe_actions, true)) {
-		raise_message('invalid_plugin', __('The action \'%s\' on Plugin \'%s\' can not be performed due to the Plugin in it\'s current state.', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
+		raise_message('invalid_plugin', __('The action \'%s\' on Plugin \'%s\' can not be performed due to the Plugin in it\'s current state.', $display_action, $plugin), MESSAGE_LEVEL_ERROR);
 		header('Location: plugins.php');
 		exit;
 	} elseif (in_array($plugin, $plugins_integrated, true)) {
-		raise_message('invalid_plugin_action', __('The action \'%s\' \'%s\' on Plugin \'%s\' can not be taken as the Plugin is integrated.', ucfirst($action), $plugin), MESSAGE_LEVEL_ERROR);
+		raise_message('invalid_plugin_action', __('The action \'%s\' \'%s\' on Plugin \'%s\' can not be taken as the Plugin is integrated.', $display_action, $plugin), MESSAGE_LEVEL_ERROR);
 		header('Location: plugins.php');
 		exit;
 	}
