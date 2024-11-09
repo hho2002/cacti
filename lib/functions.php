@@ -3435,6 +3435,10 @@ function generate_graph_best_cf($local_data_id, $requested_cf, int $ds_step = 60
 		}
 	}
 
+	if (empty($best_cf)) {
+		$best_cf = '1';
+	}
+
 	/* if you can not figure it out return average */
 	return $best_cf;
 }
