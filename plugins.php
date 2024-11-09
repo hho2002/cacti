@@ -1623,7 +1623,7 @@ function plugin_get_install_links($plugin, $table) {
 			$not_installed = plugin_required_installed($plugin, $table);
 
 			if ($not_installed != '') {
-				$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Install Plugin.  The following Plugins must be Installed first: \'%s\'', ucfirst($not_installed)) . "' class='linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
+				$link .= "<a class='pierror' href='#' title='" . __esc('Unable to Install Plugin!  %s', $not_installed) . "' class='linkEditMain'><i class='fa fa-cog deviceDisabled'></i></a>";
 			} else {
 				$link .= "<a href='" . html_escape(CACTI_PATH_URL . 'plugins.php?action=install&plugin=' . $plugin['plugin']) . "' title='" . __esc('Install Plugin') . "' class='piinstall linkEditMain'><i class='fa fa-cog deviceUp'></i></a>";
 			}

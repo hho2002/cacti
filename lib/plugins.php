@@ -314,7 +314,7 @@ function api_plugin_get_dependencies($plugin) {
 		$info = parse_ini_file($file, true);
 
 		if (isset($info['info']['requires']) && trim($info['info']['requires']) != '') {
-			$parts = explode(' ', trim($info['info']['requires']));
+			$parts = array_map('trim', explode(' ', $info['info']['requires']));
 
 			foreach ($parts as $p) {
 				$vparts = explode(':', $p);
@@ -677,12 +677,12 @@ function api_plugin_can_install($plugin, &$message) {
 
 	if (is_array($dependencies) && cacti_sizeof($dependencies)) {
 		foreach ($dependencies as $dependency => $version) {
-			if (!api_plugin_minimum_version($dependency, $version)) {
-				$message .= __('%s Version %s or above is required for %s. ', ucwords($dependency), $version, ucwords($plugin));
+			if (!plugin_valid_version_range($dependency, $version)) {
+				$message .= __('\'%s\' versions \'%s\' above or in range are required to install \'%s\'. ', ucwords($dependency), $version, ucwords($plugin));
 
 				$proceed = false;
 			} elseif (!api_plugin_installed($dependency)) {
-				$message .= __('%s is required for %s, and it is not installed. ', ucwords($dependency), ucwords($plugin));
+				$message .= __('\'%s\' must first be installed before \'%s\' is installed. ', ucwords($dependency), ucwords($plugin));
 
 				$proceed = false;
 			}
@@ -1698,7 +1698,7 @@ function plugin_is_compatible($plugin) {
 	$info = plugin_load_info_file(CACTI_PATH_PLUGINS . '/' . $plugin . '/INFO');
 
 	if ($info !== false) {
-		if (!isset($info['compat']) || cacti_version_compare(CACTI_VERSION, $info['compat'], '<')) {
+		if (!isset($info['compat']) || plugin_valid_version_range($info['compat'], CACTI_VERSION)) {
 			return array('compat' => false, 'requires' => __('Requires: Cacti >= %s', $info['compat']));
 		}
 	} else {
@@ -1755,8 +1755,8 @@ function plugin_valid_version_range($range_string, $compare_version = CACTI_VERS
 function plugin_valid_dependencies($required) {
 	if ($required == '') {
 		return true;
-	} elseif (strpos($required, ',') !== false) {
-		$requires = array_map(explode(',', $required), 'trim');
+	} elseif (strpos($required, ' ') !== false) {
+		$requires = array_map('trim', explode(' ', $required));
 	} else {
 		$requires[] = $required;
 	}
