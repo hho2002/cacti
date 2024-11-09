@@ -1006,37 +1006,44 @@ function show_database_settings() {
 function show_database_permissions() {
 	$status = db_get_permissions(true);
 
-	print "<table id='tables' class='cactiTable'>";
-	print '<thead>';
-	print "<tr class='tableHeader'>";
-	print "  <th class='tableSubHeaderColumn'>" . __('Permission Name') . '</th>';
-	print "  <th class='tableSubHeaderColumn'>" . __('Value')           . '</th>';
-	print "  <th class='tableSubHeaderColumn'>" . __('Permission Name') . '</th>';
-	print "  <th class='tableSubHeaderColumn'>" . __('Value')           . '</th>';
-	print '</tr>';
-	print '</thead>';
+	$display_text = array(
+		__('Permission Name'), __('Database'), __('Value'),
+		__('Permission Name'), __('Database'), __('Value')
+	);
+
+	html_header($display_text);
 
 	$r = 0;
+	$j = 1;
 
-	foreach ($status as $k => $v) {
-		if (($r % 2) == 0) {
-			form_alternate_row();
+	foreach ($status as $database => $perms) {
+		$first = true;
+		$r = 0;
+
+		foreach($perms as $key => $value) {
+			if (($r % 2) == 0 || $first) {
+				form_alternate_row("line$j");
+			}
+
+			print '<td>' . $key      . '</td>';
+			print '<td>' . $database . '</td>';
+			print '<td>' . ($value ? __('Yes') : __('No')) . '</td>';
+
+			if (($r % 2) == 1) {
+				form_end_row();
+			}
+
+			$r++;
+			$first = false;
 		}
-
-		print '<td>' . $k . '</td>';
-		print '<td>' . ($v ? __('Yes') : __('No')) . '</td>';
 
 		if (($r % 2) == 1) {
+			print '<td>&nbsp;</td>';
+			print '<td>&nbsp;</td>';
+			print '<td>&nbsp;</td>';
 			form_end_row();
+			$j++;
 		}
-
-		$r++;
-	}
-
-	if (($r % 2) == 1) {
-		print '<td>&nbsp;</td>';
-		print '<td>&nbsp;</td>';
-		form_end_row();
 	}
 }
 
