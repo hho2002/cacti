@@ -865,7 +865,7 @@ function update_show_current() {
 			case 0:
 			case 6:
 				$sql_where = 'WHERE (
-					pi.name LIKE '        . db_qstr('%' . get_request_var('filter') . '%') . ' OR
+					pi.description LIKE ' . db_qstr('%' . get_request_var('filter') . '%') . ' OR
 					pi.author LIKE '      . db_qstr('%' . get_request_var('filter') . '%') . ' OR
 					pa.plugin LIKE '      . db_qstr('%' . get_request_var('filter') . '%') . ' OR
 					pa.webpage LIKE '     . db_qstr('%' . get_request_var('filter') . '%') . ' OR
