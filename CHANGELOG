@@ -103,6 +103,7 @@ Cacti CHANGELOG
 -feature#5578: Provide new templates for Aruba switch, Aruba wifi controller and HPE iLO to be available during install
 -feature#5596: Add template Aruba OSCX switch 6x00
 -feature#5601: Order Graph Item Inputs Naturally (MariaDB 10.7++, no MySQL support)
+-feature#5681: Add poller information to graph-variables
 -feature#5717: Add Aruba Clearpass template
 -feature#5804: Remove the Classic Theme in Cacti
 -feature#5833: Add button for remove all data and configuration/settings
