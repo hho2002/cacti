@@ -877,7 +877,7 @@ function update_show_current() {
 				break;
 			default:
 				$sql_where = 'WHERE (
-					pi.name LIKE '    . db_qstr('%' . get_request_var('filter') . '%') . ' OR
+					pi.description LIKE ' . db_qstr('%' . get_request_var('filter') . '%') . ' OR
 					pi.author LIKE '  . db_qstr('%' . get_request_var('filter') . '%') . ' OR
 					pi.webpage LIKE ' . db_qstr('%' . get_request_var('filter') . '%') . ' OR
 					pi.plugin LIKE '  . db_qstr('%' . get_request_var('filter') . '%') .
@@ -1321,6 +1321,16 @@ function format_plugin_row($plugin, $last_plugin, $include_ordering, $table) {
 		$row .= "<td class='nowrap'>" . __('Plugin Error');
 	} else {
 		$row .= "<td class='nowrap'>" . $status_names[$plugin['status']];
+	}
+
+	$newer = db_fetch_cell_prepared('SELECT COUNT(*)
+		FROM plugin_available
+		WHERE plugin = ?
+		AND last_updated > ?',
+		array($plugin['plugin'], $plugin['last_updated']));
+
+	if ($newer > 0) {
+		$row .= ", <a class='pic deviceUp' href='" . html_escape('plugins.php?action=list&state=6&filter=' . $plugin['plugin']) . "'>" . __('Newer Version Available') . '</a>';
 	}
 
 	if ($config['poller_id'] > 1) {
