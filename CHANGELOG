@@ -37,6 +37,7 @@ Cacti CHANGELOG
 -feature#2550: Enable use of authenticator codes for Two-Factor Authentication
 -feature#2572: Support Sorting of Tree or Graph View by Data Source
 -feature#2607: Allow adding sites from command line
+-feature#2738: Set cache rebuild process indicator for the Cacti UI
 -feature#2767: Plugins should be temporarily disabled if a required plugin is also disabled
 -feature#2959: Add multi threading for push out hosts (cli)
 -feature#3048: Allow different log settings for remote pollers
