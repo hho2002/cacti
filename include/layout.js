@@ -855,6 +855,15 @@ function applySkin() {
 
 	$('#messageContainer').remove();
 
+	/**
+ 	 * Destroy all tooltips on a page after refresh
+ 	 */
+	$('.ui-tooltip').each(function() {
+		if ($(this).tooltip('instance')) {
+			$(this).tooltip('destroy');
+		}
+	});
+
 	/* Replace icons */
 	$('.fa-arrow-down').addClass('fa-chevron-down').removeClass('fa-arrow-down');
 	$('.fa-arrow-up').addClass('fa-chevron-up').removeClass('fa-arrow-up');
@@ -3255,15 +3264,6 @@ $(function () {
 	 * Unbind key elements to debounce actions
 	 */
 	$('input, select, textarea, a').unbind();
-
-	/**
- 	 * Destroy all tooltips on a page after refresh
- 	 */
-	$('.ui-tooltip').each(function() {
-		if ($(this).tooltip('instance')) {
-			$(this).tooltip('destroy');
-		}
-	});
 
 	// Use traditional popstate handler
 	window.onpopstate = function (event) {
