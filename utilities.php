@@ -42,6 +42,8 @@ switch (get_request_var('action')) {
 
     		exec_background($php_binary, CACTI_PATH_CLI . '/rebuild_poller_cache.php');
 
+			usleep(300000);
+
 			raise_message('repopulate_background', __('The Poller Cache Rebuild Operation has been started in background'), MESSAGE_LEVEL_INFO);
 		} elseif ($running === true) {
 			raise_message('repopulate_background', __('The Poller Cache Rebuild Operation has already been started.'), MESSAGE_LEVEL_INFO);
@@ -941,7 +943,7 @@ function utilities_view_poller_cache() {
 
 			break;
 		case true:
-			html_start_box(__('Poller Cache Items [ Rebuild In Process ]'), '100%', '', '3', 'center', '');
+			html_start_box(__('Poller Cache Items [ <span class="blink deviceUp">Rebuild In Process - Press Go to Check Status</span> ]'), '100%', '', '3', 'center', '');
 
 			break;
 		case 97:

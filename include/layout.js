@@ -888,6 +888,18 @@ function applySkin() {
 		});
 	}
 
+	// Setup blinking
+	setInterval(blinkMe, 1200);
+
+	function blinkMe() {
+		$('.blink').each(function() {
+			var width = $(this).textWidth();
+
+			$(this).css({ 'min-width': width });
+			$(this).fadeOut(900).fadeIn(900);
+		});
+	}
+
 	setSelectMenus();
 
 	setGraphTabs();
