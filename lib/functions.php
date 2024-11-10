@@ -6670,22 +6670,30 @@ function call_remote_data_collector($poller_id, $url, $logtype = 'WEBUI') {
 
 	$output = array();
 
+	/* register error handlers for the remote agent calls */
 	set_error_handler(
 		function ($severity, $message, $file, $line) {
 			throw new ErrorException($message, $severity, $severity, $file, $line);
+			return false;
 		}
 	);
 
-	$start = microtime(true);
+	$ra_start = microtime(true);
 
 	try {
 		$output = file_get_contents(get_url_type() .'://' . $hostname . $port . $url, false, $fgc_context);
-	} catch (Exception $e) {
-		$end = microtime(true);
+	} catch (ErrorException $e) {
+		$ra_end = microtime(true);
 
-		cacti_log(sprintf('WARNING: Failed talking to Remote Data Collector \'%s\' after %0.2f seconds.  URL:\'%s:\', Error:\'%s:\'', $poller_id, ($end - $start), $url, $e-getMessage()), false, $logtype);
+		if (debounce_run_notification('poller_connect_down:' . $poller_id)) {
+			cacti_log(sprintf('WARNING: Failed talking to Remote Data Collector \'%s\' after %0.2f seconds.  URL:\'%s:\', Error:\'%s:\'', $poller_id, ($ra_end - $ra_start), $url, $e->getMessage()), false, $logtype);
+			admin_email(__('Cacti System Warning'), __("Failed to Contact Remote Agent %s\nReason: %s.\nSee Cacti Log for details.", $hostname, $e->getMessage()));
+		}
+
+		return false;
 	}
 
+	/* restore the two original error handlers */
 	restore_error_handler();
 
 	return $output;
