@@ -119,6 +119,7 @@ Cacti CHANGELOG
 -feature#5889: Make it so that Cacti does not share sessions between browser tabs
 -feature#5892: Enable Authentication Cookies by Default in New Installs
 -feature#5907: Add Filter for Data Input Method on Data Templates
+-feature#5908: Add Searching of Notes and External ID when Searching for a Device
 -feature: Allow messages to be popup notifications
 -feature: Upgrade billboard.js to version 3.7.4
 -feature: Upgrade d3.js to version 7.8.2
