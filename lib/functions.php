@@ -8282,6 +8282,10 @@ function cacti_session_start() {
 		die('PHP Session Management is missing, please install PHP Session module');
 	}
 
+	if (!isset($config[CACTI_SESSION_NAME])) {
+		return false;
+	}
+
 	session_name($config[CACTI_SESSION_NAME]);
 
 	if (session_status() === PHP_SESSION_NONE) {
