@@ -1107,7 +1107,7 @@ function form_actions() {
 							'method'  => 'textbox',
 							'title'   => __('Title Format:'),
 							'default' => '<template_title> (1)',
-							'width'   => 25
+							'width'   => 45
 						)
 					)
 				),
