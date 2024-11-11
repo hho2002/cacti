@@ -1052,17 +1052,17 @@ function template() {
 						<input type='text' class='ui-state-default ui-corner-all' id='filter' name='filter' size='25' value='<?php print html_escape_request_var('filter');?>'>
 					</td>
 					<td>
-						<?php print __('Input Method');?>
+						<?php print __('Method');?>
 					</td>
 					<td>
-						<select id='method' onChange='applyFilter()' data-defaultLabel='<?php print __('Input Method');?>'>
-							<option value='-1'<?php print(get_request_var('profile') == '-1' ? ' selected>':'>') . __('All');?></option>
+						<select id='method' onChange='applyFilter()' data-defaultLabel='<?php print __('Method');?>'>
+							<option value='-1'<?php print(get_request_var('method') == '-1' ? ' selected>':'>') . __('All');?></option>
 							<?php
 							$methods = array_rekey(db_fetch_assoc('SELECT id, name FROM data_input ORDER BY name'), 'id', 'name');
 
 							if (cacti_sizeof($methods)) {
 								foreach ($methods as $key => $value) {
-									print "<option value='" . $key . "'" . (get_request_var('profile') == $key ? ' selected':'') . '>' . html_escape($value) . '</option>';
+									print "<option value='" . $key . "'" . (get_request_var('method') == $key ? ' selected':'') . '>' . html_escape($value) . '</option>';
 								}
 							}
 							?>
