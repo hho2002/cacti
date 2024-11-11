@@ -258,7 +258,7 @@ function form_save() {
 
 			if (cacti_sizeof($data_template_fields)) {
 				foreach ($data_template_fields as $data_template_field) {
-					raise_message('data_template_rrd_' . $data_template_field['dtr_id'], __('Field "%s" is missing an Output Field', $data_template_field['data_source_name']), MESSAGE_LEVEL_WARN);
+					raise_message('data_template_rrd_' . $data_template_field['dtr_id'], __('Field "%s" is missing an Output Field.  Select the Output Field associated with this Data Source, and press Save again.', $data_template_field['data_source_name']), MESSAGE_LEVEL_WARN);
 				}
 			}
 		}
@@ -744,17 +744,15 @@ function template_edit() {
 	if (isset($template_data_rrds)) {
 		if (cacti_sizeof($template_data_rrds) > 1) {
 			/* draw the data source tabs on the top of the page */
-			print "<div class='tabs' style='float:left;'><nav><ul role='tablist'>\n";
+			print "<div class='tabs' style='float:left;'><nav><ul role='tablist'>";
 
 			foreach ($template_data_rrds as $template_data_rrd) {
-				print "<li class='subTab'><a " . (($template_data_rrd['id'] == get_request_var('view_rrd')) ? "class='pic selected'" : "class='pic'") . " href='" . html_escape('data_templates.php?action=template_edit&id=' . get_request_var('id') . '&view_rrd=' . $template_data_rrd['id']) . "'>" . ($i + 1) . ': ' . html_escape($template_data_rrd['data_source_name']) . '</a>' . ($template_data['data_sources'] == 0 ? "<a class='pic deleteMarker fa fa-times' title='" . __esc('Delete') . "' href='" . html_escape('data_templates.php?action=rrd_remove&id=' . $template_data_rrd['id'] . '&data_template_id=' . get_request_var('id')) . "'></a>":"<a class='deleteMarkerDisabled fa fa-times' href='#' title='" . __esc('Data Templates in use can not be modified') . "'></a>") . "</li>\n";
+				print "<li class='subTab'><a " . (($template_data_rrd['id'] == get_request_var('view_rrd')) ? "class='pic selected'" : "class='pic'") . " href='" . html_escape('data_templates.php?action=template_edit&id=' . get_request_var('id') . '&view_rrd=' . $template_data_rrd['id']) . "'>" . ($i + 1) . ': ' . html_escape($template_data_rrd['data_source_name']) . '</a>' . ($template_data['data_sources'] == 0 ? "<a class='pic deleteMarker fa fa-times' title='" . __esc('Delete') . "' href='" . html_escape('data_templates.php?action=rrd_remove&id=' . $template_data_rrd['id'] . '&data_template_id=' . get_request_var('id')) . "'></a>":"<a class='deleteMarkerDisabled fa fa-times' href='#' title='" . __esc('Data Templates in use can not be modified') . "'></a>") . "</li>";
 
 				$i++;
 			}
 
-			print "
-			</ul></nav>\n
-			</div>\n";
+			print "</ul></nav></div>";
 		} elseif (cacti_sizeof($template_data_rrds) == 1) {
 			set_request_var('view_rrd', $template_data_rrds[0]['id']);
 		}
