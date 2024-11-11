@@ -1580,6 +1580,49 @@ function cacti_log($string, $output = false, $environ = 'CMDPHP', $level = '') {
 	}
 
 	$database_log = $last_log;
+
+	if (1 == 0) {
+		$limit = $skip = 0;
+		$skip  = $skip >= 0 ? $skip : 1;
+		$limit = $limit > 0 ? ($limit + $skip) : 0;
+
+		$callers = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $limit);
+
+		while ($skip > 0) {
+			array_shift($callers);
+			$skip--;
+		}
+
+		$s='';
+
+		foreach ($callers as $c) {
+			if (isset($c['line'])) {
+				$line = '[' . $c['line'] . ']';
+			} else {
+				$line = '';
+			}
+
+			if (isset($c['file'])) {
+				$file = str_replace(CACTI_PATH_BASE, '', $c['file']) . $line;
+			} else {
+				$file = $line;
+			}
+
+			$func = $c['function'].'()';
+
+			if (isset($c['class'])) {
+				$func = $c['class'] . $c['type'] . $func;
+			}
+
+			$s = ($file != '' ? $file . ':':'') . "$func" . (empty($s) ? '' : ', ') . $s;
+		}
+
+		if (!empty($s)) {
+			$s = ' (' . $s . ')';
+		}
+
+		error_log($message . '-----------------' . $s);
+	}
 }
 
 /**
@@ -7115,7 +7158,7 @@ function format_cacti_version($version, $format = CACTI_VERSION_FORMAT_FULL) {
 	if (count($parts) > 3) {
 		if ($parts[3] == '-1') {
 			$source = get_source_timestamp();
-			cacti_log('Source: ' . json_encode($source ?? '<null>'), false, 'DEBUG');
+			//cacti_log('Source: ' . json_encode($source ?? '<null>'), false, 'DEBUG');
 			$parts[3] = 99;
 			$parts[4] = $source[0];
 			$parts[5] = $source[1];
