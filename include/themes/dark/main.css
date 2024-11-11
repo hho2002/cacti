@@ -2434,6 +2434,10 @@ tr#realtime td:first-child {
 	display: none;
 }
 
+.ui-selectmenu-search input {
+	width: 100%;
+}
+
 /* New Checkbox Stuff */
 .checkboxSwitch {
 	position: relative;

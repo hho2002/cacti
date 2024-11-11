@@ -2004,6 +2004,10 @@ ul#nav {
 	border: transparent;
 }
 
+.ui-selectmenu-search input {
+	width: 100%;
+}
+
 div.preformatted {
 	font-family: monospace;
 	white-space: pre;
