@@ -2224,8 +2224,8 @@ $settings['boost'] = array(
 		'array'         => $boost_max_runtime
 	),
 	'boost_redirect' => array(
-		'friendly_name' => __('Enable direct population of poller_output_boost table'),
-		'description'   => __('Enables direct insert of records into poller output boost with results in a 25% time reduction in each poll cycle.'),
+		'friendly_name' => __('Enable Direct Population of Boost Table'),
+		'description'   => __('Enables direct insert of records into poller output boost table with results in a 25% time reduction in each poll cycle.'),
 		'method'        => 'checkbox',
 		'default'       => ''
 	),
