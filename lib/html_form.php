@@ -613,7 +613,7 @@ function form_filepath_box($form_name, $form_previous_value, $form_default_value
 		$extra_text  = $data['text'];
 		$extra_class = (isset($data['error']) ? 'fa-times-circle' : 'fa-check-circle');
 		$extra_color = (isset($data['error']) ? 'red' : 'green');
-		$error_class = (isset($data['error']) ? 'txtErrorTextBox' : '');
+		$error_class = (isset($data['error']) ? ' txtErrorTextBox' : '');
 	} else {
 		if (isset($_SESSION[SESS_FIELD_VALUES])) {
 			if (!empty($_SESSION[SESS_FIELD_VALUES][$form_name])) {
@@ -623,7 +623,7 @@ function form_filepath_box($form_name, $form_previous_value, $form_default_value
 
 		if (isset($_SESSION[SESS_ERROR_FIELDS])) {
 			if (!empty($_SESSION[SESS_ERROR_FIELDS][$form_name])) {
-				$error_class = 'txtErrorTextBox';
+				$error_class = ' txtErrorTextBox';
 				unset($_SESSION[SESS_ERROR_FIELDS][$form_name]);
 			}
 		}
