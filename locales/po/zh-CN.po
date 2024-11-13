@@ -13975,7 +13975,7 @@ msgstr "检测到未保存的更改"
 
 #: lib/html_form.php:1403
 msgid "You have unsaved changes on this form.  If you press &#39;Continue&#39; these changes will be discarded.  Press &#39;Cancel&#39; to continue editing the form."
-msgstr "您在此表单上有未保存的更改.如果按'继续',这些更改将被丢弃.按'取消'继续编辑表单."
+msgstr "您在此表单上有未保存的更改.如果按&#39;继续&#39;,这些更改将被丢弃.按&#39;取消&#39;继续编辑表单."
 
 #: lib/html_form_template.php:161
 msgid "Attempted SQL Injection"
